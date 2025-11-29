@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gastro Log (Gemini AI)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+        main { padding-top: 70px; padding-bottom: 80px; }
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased">
+
+    <header class="bg-white shadow-sm fixed top-0 left-0 w-full z-50">
+        <div class="max-w-md mx-auto px-4 h-16 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600 flex items-center"><i class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
+            <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center">
+                <i class="fa-solid fa-trash mr-1"></i> 履歴削除
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md mx-auto p-4 min-h-screen">
+        <section id="view-analyze" class="view-section active">
+            <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4">食事の入力</h2>
+                <div class="mb-4">
+                    <label for="cameraInput" id="imageUploadLabel" class="cursor-pointer block w-full h-48 border-2 border-dashed border-blue-200 rounded-xl flex flex-col justify-center items-center hover:bg-blue-50 transition relative overflow-hidden bg-gray-50">
+                        <div id="uploadPlaceholder" class="flex flex-col items-center text-gray-400">
+                            <i class="fa-solid fa-camera text-3xl mb-2"></i><span class="text-xs">写真を撮影・選択</span>
+                        </div>
+                        <img id="previewImage" class="hidden absolute inset-0 w-full h-full object-cover" />
+                        <button id="removeImageBtn" onclick="removeImage(event)" class="hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-red-600 transition"><i class="fa-solid fa-xmark"></i></button>
+                    </label>
+                    <input type="file" id="cameraInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                </div>
+                <div class="mb-4 relative">
+                    <textarea id="textInput" rows="3" placeholder="補足メモ（例: ラーメン味濃いめ、脂多め）" class="w-full p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" oninput="checkAnalyzeable()"></textarea>
+                    <i class="fa-solid fa-pen absolute top-3 right-3 text-gray-300"></i>
+                </div>
+                <div id="loadingArea" class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4">
+                    <div class="loader mb-3"></div><p class="text-sm text-blue-600 font-bold animate-pulse">AIが成分を解析しています...</p>
+                </div>
+                <button id="analyzeBtn" onclick="analyze()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center" disabled>
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>解析する
+                </button>
+            </div>
+            <div id="resultArea" class="hidden bg-white rounded-xl shadow-sm border-l-4 border-green-500 overflow-hidden">
+                <div class="p-5">
+                    <h3 class="font-bold text-lg mb-3 flex items-center"><i class="fa-solid fa-circle-check text-green-500 mr-2"></i>解析結果</h3>
+                    <div id="tagsContainer" class="flex flex-wrap gap-2 mb-5"></div>
+                    <button onclick="saveLog()" class="w-full bg-green-50 hover:bg-green-100 text-green-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center transition"><i class="fa-solid fa-floppy-disk mr-2"></i>この結果を記録</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-history" class="view-section">
+            <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>成分ランキング (TOP 5)</h2>
+                <div id="statsContainer" class="space-y-3"></div>
+            </div>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 pl-2">食事ログ</h2>
+            <div id="historyList" class="space-y-4"></div>
+        </section>
+
+        <section id="view-settings" class="view-section">
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-sliders mr-2"></i>設定</h2>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2 text-gray-700">Gemini API Key <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10">
+                        <i class="fa-solid fa-key absolute top-3.5 right-3 text-gray-300"></i>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">APIキーを入力後、下の「モデル一覧を更新」を押してください。</p>
+                </div>
+
+                <div class="mb-8">
+                    <label class="block text-sm font-bold mb-2 text-gray-700">使用モデル</label>
+                    
+                    <div id="modelSelectContainer" class="relative mb-2">
+                        <select id="modelSelect" class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                            <option value="gemini-2.5-flash">gemini-2.5-flash (推奨)</option>
+                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute top-4 right-4 text-gray-400 pointer-events-none"></i>
+                    </div>
+
+                    <div id="modelInputContainer" class="relative mb-2 hidden">
+                        <input type="text" id="modelInput" placeholder="モデル名を手入力" class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fa-solid fa-robot absolute top-3.5 right-3 text-gray-300"></i>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="fetchModels()" id="fetchModelsBtn" class="flex-1 text-xs bg-blue-50 text-blue-700 font-bold px-3 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center">
+                            <i class="fa-solid fa-cloud-arrow-down mr-1"></i>モデル一覧を更新
+                        </button>
+                        <button onclick="toggleModelInputMode()" class="text-xs bg-gray-100 text-gray-500 font-bold px-3 py-2.5 rounded-lg hover:bg-gray-200 transition">
+                            <i class="fa-solid fa-pen mr-1"></i>手入力
+                        </button>
+                    </div>
+                    
+                    <p id="modelFetchStatus" class="text-xs text-gray-400 mt-2 h-4"></p>
+                </div>
+
+                <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">
+                    設定を保存して戻る
+                </button>
+            </div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v1.3</p></div>
+        </section>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 pb-safe">
+        <div class="max-w-md mx-auto flex justify-around items-center h-16">
+            <button onclick="switchView('analyze')" class="nav-btn active flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-camera text-xl mb-1"></i><span class="text-xs font-bold">入力・解析</span></button>
+            <button onclick="switchView('history')" class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-list-ul text-xl mb-1"></i><span class="text-xs font-bold">記録・集計</span></button>
+            <button onclick="switchView('settings')" class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-gear text-xl mb-1"></i><span class="text-xs font-bold">設定</span></button>
+        </div>
+    </nav>
+
+    <script>
+        let currentBase64 = null;
+        let currentIngredients = [];
+        let isManualModelMode = false;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            if(!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
+            checkAnalyzeable();
+        });
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            updateNavStyles(viewName);
+            window.scrollTo(0, 0);
+            if(viewName === 'history') { renderHistory(); updateStats(); }
+        }
+
+        function updateNavStyles(activeView) {
+            const icons = { analyze: 0, history: 1, settings: 2 };
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(btn => btn.classList.remove('text-blue-600', 'text-gray-400'));
+            navBtns.forEach(btn => btn.classList.add('text-gray-400'));
+            if(navBtns[icons[activeView]]) { navBtns[icons[activeView]].classList.remove('text-gray-400'); navBtns[icons[activeView]].classList.add('text-blue-600'); }
+        }
+
+        // --- 設定関連 ---
+        function saveSettings() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            // モードに応じて保存する値を変える
+            let model;
+            if (isManualModelMode) {
+                model = document.getElementById('modelInput').value.trim();
+            } else {
+                model = document.getElementById('modelSelect').value;
+            }
+
+            if(!key) { alert('APIキーを入力してください'); return; }
+            if(!model) { alert('モデルを選択または入力してください'); return; }
+
+            localStorage.setItem('gemini_api_key', key);
+            localStorage.setItem('gemini_model', model);
+            alert('設定を保存しました');
+            switchView('analyze');
+        }
+
+        function loadSettings() {
+            const key = localStorage.getItem('gemini_api_key');
+            const model = localStorage.getItem('gemini_model'); // デフォルトなし。保存値を尊重
+            
+            if(key) document.getElementById('apiKeyInput').value = key;
+
+            // 保存されたモデルがある場合、selectにあるか確認してセット
+            if (model) {
+                const select = document.getElementById('modelSelect');
+                const optionExists = Array.from(select.options).some(opt => opt.value === model);
+                
+                if (optionExists) {
+                    select.value = model;
+                } else {
+                    // selectにないので手入力モードとして扱う（あるいはOptionを追加する）
+                    // ここでは手入力モードに切り替えて値をセット
+                    toggleModelInputMode(true);
+                    document.getElementById('modelInput').value = model;
+                }
+            } else {
+                // 初回起動時など
+                document.getElementById('modelSelect').value = "gemini-2.5-flash"; 
+            }
+        }
+
+        // --- モデル一覧取得ロジック (v1beta対応版) ---
+        async function fetchModels() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const statusEl = document.getElementById('modelFetchStatus');
+            const selectEl = document.getElementById('modelSelect');
+            const btn = document.getElementById('fetchModelsBtn');
+
+            if (!apiKey) { alert('APIキーを入力してください'); return; }
+
+            statusEl.textContent = '最新モデル情報を取得中(v1beta)...';
+            statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse';
+            btn.disabled = true;
+
+            try {
+                // ★ここを v1 から v1beta に変更しました
+                const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+                const res = await fetch(url);
+                
+                if(!res.ok) {
+                    throw new Error(`Error: ${res.status}`);
+                }
+
+                const data = await res.json();
+                
+                const availableModels = data.models
+                    .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                    .map(m => m.name.replace('models/', ''))
+                    .sort();
+
+                if (availableModels.length === 0) {
+                    throw new Error('利用可能なモデルが見つかりませんでした');
+                }
+
+                selectEl.innerHTML = '';
+                availableModels.forEach(modelName => {
+                    const option = document.createElement('option');
+                    option.value = modelName;
+                    option.textContent = modelName;
+                    
+                    // 最新・高性能モデルを目立たせる
+                    if(modelName.includes('gemini-3') || modelName.includes('pro-preview')) {
+                        option.textContent += ' 🚀(New)'; 
+                    } else if(modelName.includes('flash') && !modelName.includes('legacy')) {
+                        option.textContent += ' ⚡'; 
+                    }
+                    selectEl.appendChild(option);
+                });
+
+                // gemini-3系があればそれを優先、なければ新しいFlashを選択
+                const bestModel = availableModels.find(m => m.includes('gemini-3')) || availableModels.find(m => m.includes('2.5-flash')) || availableModels[0];
+                selectEl.value = bestModel;
+
+                if (isManualModelMode) toggleModelInputMode(false);
+                statusEl.textContent = `取得成功! ${availableModels.length}個のモデルが見つかりました(v1beta)`;
+                statusEl.className = 'text-xs text-green-600 mt-2';
+
+            } catch (e) {
+                console.error(e);
+                statusEl.textContent = `取得失敗: ${e.message}`;
+                statusEl.className = 'text-xs text-red-500 mt-2';
+                alert('モデル一覧の取得に失敗しました。');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+                
+        function toggleModelInputMode(forceManual = null) {
+            const selectContainer = document.getElementById('modelSelectContainer');
+            const inputContainer = document.getElementById('modelInputContainer');
+            
+            // 引数がなければトグル
+            if (forceManual === null) {
+                isManualModelMode = !isManualModelMode;
+            } else {
+                isManualModelMode = forceManual;
+            }
+
+            if (isManualModelMode) {
+                selectContainer.classList.add('hidden');
+                inputContainer.classList.remove('hidden');
+            } else {
+                selectContainer.classList.remove('hidden');
+                inputContainer.classList.add('hidden');
+            }
+        }
+
+        // --- 入力処理 ---
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            resizeImage(file).then(resizedBase64 => {
+                currentBase64 = resizedBase64;
+                const imgEl = document.getElementById('previewImage');
+                imgEl.src = currentBase64;
+                imgEl.classList.remove('hidden');
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+                document.getElementById('removeImageBtn').classList.remove('hidden');
+                document.getElementById('imageUploadLabel').classList.add('border-blue-500');
+                checkAnalyzeable();
+                document.getElementById('resultArea').classList.add('hidden');
+            });
+            event.target.value = '';
+        }
+
+        function removeImage(event) {
+            event.preventDefault();
+            currentBase64 = null;
+            document.getElementById('previewImage').src = '';
+            document.getElementById('previewImage').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('removeImageBtn').classList.add('hidden');
+            document.getElementById('imageUploadLabel').classList.remove('border-blue-500');
+            checkAnalyzeable();
+        }
+
+        function checkAnalyzeable() {
+            const text = document.getElementById('textInput').value.trim();
+            document.getElementById('analyzeBtn').disabled = !(currentBase64 || text.length > 0);
+        }
+
+        function resizeImage(file, maxWidth = 800) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            });
+        }
+
+// --- API解析 (v1beta対応版) ---
+        async function analyze() {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+            const textMemo = document.getElementById('textInput').value.trim();
+
+            if (!apiKey) { alert('APIキーが設定されていません。'); switchView('settings'); return; }
+
+            document.getElementById('loadingArea').classList.remove('hidden');
+            document.getElementById('analyzeBtn').classList.add('hidden');
+            document.getElementById('resultArea').classList.add('hidden');
+
+            const systemPrompt = `
+                あなたは消化器内科の専門知識を持つ栄養士です。
+                提供された料理の画像、またはテキスト情報（あるいはその両方）を解析し、胃腸に負担をかける可能性のある成分を特定してください。
+                対象となる成分の例：脂質、カプサイシン（辛味成分）、乳糖、グルテン、カフェイン、高FODMAP食材、強い酸味、消化の悪い繊維質など。
+                回答は必ず以下のJSONフォーマットの配列のみを出力してください。マークダウン記法や追加の説明は一切不要です。
+                ["成分A", "成分B", "成分C"]
+                もし特に該当する成分がなければ空の配列 [] を返してください。
+            `;
+
+            let requestParts = [{ text: systemPrompt }];
+            if (textMemo) requestParts.push({ text: `【補足テキスト情報】\n${textMemo}` });
+            if (currentBase64) requestParts.push({ inline_data: { mime_type: "image/jpeg", data: currentBase64.split(',')[1] } });
+
+            // ★ここを v1 から v1beta に変更しました
+            // (v1betaは通常のv1モデルも大抵サポートしているため、全体をbetaに切り替えても問題ありません)
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: requestParts }] })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        throw new Error('使いすぎです(レート制限)。\n無料枠の上限に達しました。数分待ってから再度お試しください。');
+                    }
+                    if (response.status === 503) {
+                        throw new Error('サーバーが混雑しています。しばらく待ってから再試行してください。');
+                    }
+                    const errData = await response.json();
+                    throw new Error(errData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawText) throw new Error('Geminiからの応答が空でした。');
+
+                const jsonStr = rawText.replace(/```json|```/g, '').trim();
+                try {
+                    currentIngredients = JSON.parse(jsonStr);
+                } catch (e) {
+                     console.error("JSON Parse Error. Raw text:", rawText);
+                     currentIngredients = []; 
+                     alert("解析結果の形式が不正でした。");
+                }
+                displayResults(currentIngredients);
+
+            } catch (error) {
+                console.error(error);
+                alert(`解析エラー:\n${error.message}`);
+                document.getElementById('analyzeBtn').classList.remove('hidden');
+            } finally {
+                document.getElementById('loadingArea').classList.add('hidden');
+            }
+        }
+        
+        function displayResults(ingredients) {
+            const container = document.getElementById('tagsContainer');
+            container.innerHTML = '';
+            if (!ingredients || ingredients.length === 0) {
+                container.innerHTML = '<span class="text-gray-500 text-sm flex items-center"><i class="fa-regular fa-face-smile mr-1"></i>特になし (胃腸に優しい可能性が高いです)</span>';
+            } else {
+                ingredients.forEach(tag => {
+                    const tagName = tag.length > 15 ? tag.substring(0,15) + '...' : tag;
+                    const span = document.createElement('span');
+                    span.className = 'bg-red-100 text-red-700 text-sm font-semibold px-3 py-1 rounded-full border border-red-200';
+                    span.textContent = tagName;
+                    container.appendChild(span);
+                });
+            }
+            document.getElementById('resultArea').classList.remove('hidden');
+        }
+
+        function saveLog() {
+            if (!currentBase64 && !document.getElementById('textInput').value.trim() && currentIngredients.length === 0) return;
+            const newLog = {
+                id: Date.now(),
+                date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' }),
+                image: currentBase64,
+                memo: document.getElementById('textInput').value.trim(),
+                ingredients: currentIngredients
+            };
+            let history = JSON.parse(localStorage.getItem('food_history') || '[]');
+            history.unshift(newLog);
+            history = history.slice(0, 50);
+            try {
+                localStorage.setItem('food_history', JSON.stringify(history));
+                alert('記録しました');
+                resetAnalyzeView();
+                switchView('history');
+            } catch (e) { alert('保存容量の上限です。古い履歴を削除してください。'); }
+        }
+
+        function resetAnalyzeView() {
+            currentBase64 = null;
+            currentIngredients = [];
+            document.getElementById('textInput').value = '';
+            removeImage(new Event('click'));
+            document.getElementById('analyzeBtn').classList.remove('hidden');
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('resultArea').classList.add('hidden');
+        }
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('food_history') || '[]');
+            const listContainer = document.getElementById('historyList');
+            listContainer.innerHTML = '';
+            if (history.length === 0) {
+                listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"><i class="fa-solid fa-utensils text-3xl mb-2 opacity-50"></i><p class="text-sm">まだ記録がありません</p></div>`;
+                return;
+            }
+            history.forEach(item => {
+                const tagsHtml = item.ingredients && item.ingredients.length > 0 
+                    ? item.ingredients.map(t => `<span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-100">${t}</span>`).join('')
+                    : '<span class="text-xs text-green-600"><i class="fa-solid fa-check mr-1"></i>注意成分なし</span>';
+                const imageHtml = item.image 
+                    ? `<img src="${item.image}" class="w-20 h-20 object-cover rounded-lg bg-gray-200 border border-gray-100">`
+                    : `<div class="w-20 h-20 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300"><i class="fa-solid fa-comment-dots text-2xl"></i></div>`;
+                const memoHtml = item.memo 
+                    ? `<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded border border-gray-100"><i class="fa-regular fa-comment mr-1 text-gray-400"></i>${item.memo}</p>` : '';
+                const html = `
+                    <div class="bg-white rounded-xl shadow-sm p-4 relative">
+                        <button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button>
+                        <div class="flex gap-4 items-start mb-2">
+                            ${imageHtml}
+                            <div class="flex-1 min-w-0 pt-1">
+                                <p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${item.date}</p>
+                                <div class="flex flex-wrap gap-1.5">${tagsHtml}</div>
+                            </div>
+                        </div>
+                        ${memoHtml}
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function deleteLog(id) {
+            if(!confirm('この記録を削除しますか？')) return;
+            let history = JSON.parse(localStorage.getItem('food_history') || '[]');
+            history = history.filter(item => item.id !== id);
+            localStorage.setItem('food_history', JSON.stringify(history));
+            renderHistory();
+            updateStats();
+        }
+
+        function clearAllData() {
+            if(!confirm('すべての履歴データを削除しますか？\n(APIキーの設定は残ります)')) return;
+            localStorage.removeItem('food_history');
+            renderHistory();
+            updateStats();
+        }
+
+        function updateStats() {
+            const history = JSON.parse(localStorage.getItem('food_history') || '[]');
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = '';
+            if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データが集まるとここにランキングが表示されます</p>'; return; }
+            const counts = {};
+            let totalDetected = 0;
+            history.forEach(item => { if(item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } });
+            if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">まだ注意成分は検出されていません</p>'; return; }
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const maxCount = sorted[0][1];
+            const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500'];
+            sorted.forEach(([name, count], index) => {
+                const percentage = (count / maxCount) * 100;
+                const barColor = colors[index % colors.length];
+                const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`;
+                statsContainer.insertAdjacentHTML('beforeend', html);
+            });
+        }
+    </script>
+</body>
+</html>
