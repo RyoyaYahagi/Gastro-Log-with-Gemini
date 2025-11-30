@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
-        /* メインのパディングを調整 (固定ヘッダー + 固定タブバーの分) */
-        main { padding-top: 130px; padding-bottom: 90px; }
+        
+        /* ヘッダーの高さ(64px)分だけ余白を空ける */
+        main { padding-top: 80px; padding-bottom: 90px; }
+        
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -26,9 +28,6 @@
         .calendar-day.selected { background-color: #eff6ff; border: 2px solid #3b82f6; font-weight: bold; }
         .calendar-day.today { background-color: #fff7ed; border: 1px solid #fdba74; }
         .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
-
-        /* 解析画面だけは上部の固定タブが不要なのでパディングを減らす */
-        #view-analyze, #view-settings { margin-top: -50px; } 
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
@@ -36,17 +35,6 @@
         <h1 class="text-xl font-bold text-blue-600 flex items-center"><i class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
         <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
     </header>
-
-    <div id="historyStickyTabs" class="hidden fixed top-16 left-0 w-full bg-gray-100 z-40 p-2 shadow-inner">
-        <div class="max-w-md mx-auto flex bg-white rounded-lg shadow-sm p-1">
-            <button onclick="toggleHistoryView('list')" id="btnViewList" class="flex-1 py-2 text-sm font-bold rounded-md bg-blue-600 text-white transition shadow-sm">
-                <i class="fa-solid fa-list-ul mr-1"></i>リスト
-            </button>
-            <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-50 transition">
-                <i class="fa-solid fa-calendar-days mr-1"></i>カレンダー
-            </button>
-        </div>
-    </div>
 
     <main class="max-w-md mx-auto p-4 min-h-screen">
         <section id="view-analyze" class="view-section active">
@@ -100,7 +88,18 @@
         </section>
 
         <section id="view-history" class="view-section">
-            <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
+            <div id="historyStickyTabs" class="sticky top-16 bg-gray-100 z-40 pb-4 pt-1">
+                <div class="flex bg-white rounded-lg shadow-sm p-1">
+                    <button onclick="toggleHistoryView('list')" id="btnViewList" class="flex-1 py-2 text-sm font-bold rounded-md bg-blue-600 text-white transition shadow-sm">
+                        <i class="fa-solid fa-list-ul mr-1"></i>リスト
+                    </button>
+                    <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-50 transition">
+                        <i class="fa-solid fa-calendar-days mr-1"></i>カレンダー
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-5 mb-6 z-0">
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>成分ランキング (TOP 5)</h2>
                 <div id="statsContainer" class="space-y-3"></div>
             </div>
@@ -134,7 +133,7 @@
                 <div class="mb-8 pt-6 border-t border-gray-100"><label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label><p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p><div class="flex gap-2"><button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div></div>
                 <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.1</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.2</p></div>
         </section>
     </main>
 
@@ -177,11 +176,7 @@
             document.getElementById(`view-${viewName}`).classList.add('active');
             updateNavStyles(viewName); window.scrollTo(0, 0);
 
-            // 履歴タブ用固定バーの表示制御
-            const stickyTabs = document.getElementById('historyStickyTabs');
-            if (viewName === 'history') {
-                stickyTabs.classList.remove('hidden');
-                // モードに応じて再描画
+            if(viewName === 'history') { 
                 if (currentViewMode === 'calendar') {
                     renderCalendar();
                     renderHistory(selectedDate);
@@ -189,8 +184,6 @@
                     renderHistory();
                 }
                 updateStats();
-            } else {
-                stickyTabs.classList.add('hidden');
             }
         }
         function updateNavStyles(activeView) {
@@ -210,7 +203,6 @@
             const listTitle = document.getElementById('historyListTitle');
 
             if (mode === 'calendar') {
-                // Style Active: Calendar
                 btnList.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
                 btnList.classList.add('text-gray-500', 'hover:bg-gray-50');
                 btnCal.classList.remove('text-gray-500', 'hover:bg-gray-50');
@@ -221,7 +213,6 @@
                 renderHistory(selectedDate);
                 listTitle.textContent = selectedDate ? `${selectedDate.getMonth()+1}/${selectedDate.getDate()} のログ` : "ログ一覧";
             } else {
-                // Style Active: List
                 btnCal.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
                 btnCal.classList.add('text-gray-500', 'hover:bg-gray-50');
                 btnList.classList.remove('text-gray-500', 'hover:bg-gray-50');
@@ -318,7 +309,7 @@
             });
         }
 
-        // --- Basic Functions (Copy from previous) ---
+        // --- Basic Functions ---
         function loadMedicationHistory() {
             const list = JSON.parse(localStorage.getItem('medication_history') || '[]');
             const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = '';
