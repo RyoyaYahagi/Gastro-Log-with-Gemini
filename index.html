@@ -21,7 +21,6 @@
         .calendar-day.selected { background-color: #eff6ff; border: 2px solid #3b82f6; font-weight: bold; }
         .calendar-day.today { background-color: #fff7ed; border: 1px solid #fdba74; }
         .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
-        /* スライダーのカスタマイズ */
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -8px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
@@ -46,7 +45,7 @@
                     <input type="file" id="cameraInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
                 </div>
                 <div class="mb-6 relative">
-                    <textarea id="textInput" rows="2" placeholder="食事のメモ..." class="w-full p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" oninput="checkAnalyzeable()"></textarea>
+                    <textarea id="textInput" rows="2" placeholder="食事のメモ（例: ラーメン大盛り、味濃いめ）" class="w-full p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" oninput="checkAnalyzeable()"></textarea>
                 </div>
 
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3 border-t pt-4">生活・体調ログ</h2>
@@ -82,15 +81,15 @@
                 </div>
                 <div class="mb-6"><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-person-walking mr-1"></i>その他の運動</label><input type="text" id="exerciseInput" placeholder="例: ヨガ15分" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
 
-                <div id="loadingArea" class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4"><div class="loader mb-3"></div><p class="text-sm text-blue-600 font-bold animate-pulse">AIが解析中...</p></div>
+                <div id="loadingArea" class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4"><div class="loader mb-3"></div><p class="text-sm text-blue-600 font-bold animate-pulse">成分を詳細分析中...</p></div>
                 <div class="flex gap-3" id="actionButtons">
                     <button onclick="saveLog(false)" id="quickSaveBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 px-2 rounded-xl text-sm transition flex flex-col items-center justify-center"><span class="text-xs mb-0.5"><i class="fa-solid fa-pen mr-1"></i>解析せず</span>そのまま記録</button>
-                    <button onclick="analyze()" id="analyzeBtn" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center" disabled><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>AI解析して記録</button>
+                    <button onclick="analyze()" id="analyzeBtn" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center" disabled><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>詳細解析して記録</button>
                 </div>
             </div>
             <div id="resultArea" class="hidden bg-white rounded-xl shadow-sm border-l-4 border-green-500 overflow-hidden mb-8">
                 <div class="p-5">
-                    <h3 class="font-bold text-lg mb-3 flex items-center"><i class="fa-solid fa-circle-check text-green-500 mr-2"></i>解析結果</h3>
+                    <h3 class="font-bold text-lg mb-3 flex items-center"><i class="fa-solid fa-list-check text-green-500 mr-2"></i>検出された食材</h3>
                     <div id="tagsContainer" class="flex flex-wrap gap-2 mb-5"></div>
                     <button onclick="saveLog(true)" class="w-full bg-green-50 hover:bg-green-100 text-green-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center transition"><i class="fa-solid fa-floppy-disk mr-2"></i>この内容で保存</button>
                 </div>
@@ -105,7 +104,7 @@
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-5 mb-6 z-0">
-                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>成分ランキング (TOP 5)</h2>
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>よく摂る成分 (TOP 5)</h2>
                 <div id="statsContainer" class="space-y-3"></div>
             </div>
             <div id="calendarContainer" class="hidden bg-white rounded-xl shadow-sm p-4 mb-6">
@@ -136,7 +135,7 @@
                 <div class="mb-8 pt-6 border-t border-gray-100"><label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label><p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p><div class="flex gap-2"><button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div></div>
                 <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.3</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.4</p></div>
         </section>
     </main>
 
@@ -163,6 +162,7 @@
             document.getElementById('stressValueDisplay').textContent = val;
         }
 
+        // --- URL Params ---
         function checkUrlParams() {
             const params = new URLSearchParams(window.location.search);
             let hasData = false;
@@ -170,13 +170,7 @@
             if (params.has('quality')) { document.getElementById('sleepQuality').value = params.get('quality'); hasData = true; }
             if (params.has('steps')) { document.getElementById('stepsInput').value = params.get('steps'); hasData = true; }
             if (params.has('exercise')) { document.getElementById('exerciseInput').value = params.get('exercise'); hasData = true; }
-            // ★ストレスパラメータ
-            if (params.has('stress')) { 
-                const s = params.get('stress');
-                document.getElementById('stressInput').value = s; 
-                updateStressDisplay(s);
-                hasData = true; 
-            }
+            if (params.has('stress')) { const s = params.get('stress'); document.getElementById('stressInput').value = s; updateStressDisplay(s); hasData = true; }
             if (hasData) { document.getElementById('autoFillMessage').classList.remove('hidden'); window.history.replaceState({}, document.title, window.location.pathname); }
         }
 
@@ -185,7 +179,6 @@
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             updateNavStyles(viewName); window.scrollTo(0, 0);
-
             const stickyTabs = document.getElementById('historyStickyTabs');
             if (viewName === 'history') {
                 stickyTabs.classList.remove('hidden');
@@ -199,7 +192,7 @@
             if(navBtns[icons[activeView]]) { navBtns[icons[activeView]].classList.remove('text-gray-400'); navBtns[icons[activeView]].classList.add('text-blue-600'); }
         }
 
-        // --- Toggle History View ---
+        // --- History / Calendar ---
         function toggleHistoryView(mode) {
             currentViewMode = mode;
             const btnList = document.getElementById('btnViewList'); const btnCal = document.getElementById('btnViewCalendar');
@@ -215,8 +208,6 @@
                 calContainer.classList.add('hidden'); selectedDate = null; renderHistory(null); listTitle.textContent = "ログ一覧";
             }
         }
-
-        // --- Calendar Logic ---
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid'); const title = document.getElementById('calendarTitle');
             grid.innerHTML = ''; title.textContent = `${currentYear}年 ${currentMonth + 1}月`;
@@ -232,8 +223,11 @@
                 const dayLogs = history.filter(item => { const logDate = new Date(item.id); return logDate.toDateString() === thisDate.toDateString(); });
                 if (dayLogs.length > 0) {
                     const dot = document.createElement('div'); dot.className = 'dot';
-                    const hasWarning = dayLogs.some(item => item.ingredients && item.ingredients.length > 0);
-                    const hasSafeFood = dayLogs.some(item => item.ingredients && item.ingredients.length === 0 && (item.image || item.memo));
+                    // 判定ロジック: リスクワードが含まれるか
+                    const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
+                    const hasWarning = dayLogs.some(item => item.ingredients && item.ingredients.some(ing => riskWords.some(r => ing.includes(r))));
+                    const hasSafeFood = dayLogs.some(item => item.ingredients && item.ingredients.length > 0 && !item.ingredients.some(ing => riskWords.some(r => ing.includes(r))));
+                    
                     if (hasWarning) dot.classList.add('bg-red-500'); else if (hasSafeFood) dot.classList.add('bg-green-500'); else dot.classList.add('bg-blue-400');
                     dayDiv.appendChild(dot);
                 }
@@ -247,7 +241,7 @@
         }
         function changeMonth(delta) { currentMonth += delta; if (currentMonth > 11) { currentMonth = 0; currentYear++; } else if (currentMonth < 0) { currentMonth = 11; currentYear--; } renderCalendar(); }
 
-        // --- Render History ---
+        // --- Render History (Tag Color Logic Updated) ---
         function renderHistory(filterDate = null) {
             const rawHistory = JSON.parse(localStorage.getItem('food_history') || '[]');
             const listContainer = document.getElementById('historyList'); listContainer.innerHTML = '';
@@ -256,80 +250,92 @@
             if (history.length === 0) { listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"><i class="fa-solid fa-utensils text-3xl mb-2 opacity-50"></i><p class="text-sm">記録はありません</p></div>`; return; }
 
             history.forEach(item => {
-                const tagsHtml = item.ingredients && item.ingredients.length > 0 ? item.ingredients.map(t => `<span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-100">${t}</span>`).join('') : (item.image || (item.memo && !item.life) ? '<span class="text-xs text-green-600"><i class="fa-solid fa-check mr-1"></i>成分なし</span>' : '');
+                // 食材タグの生成（色分けロジック）
+                const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
+                const tagsHtml = item.ingredients && item.ingredients.length > 0 ? item.ingredients.map(t => {
+                    let colorClass = 'bg-green-50 text-green-700 border-green-200'; // 安全
+                    if (riskWords.some(word => t.includes(word))) {
+                        colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; // 注意
+                    }
+                    return `<span class="${colorClass} text-xs px-2 py-0.5 rounded border mr-1 mb-1 inline-block">${t}</span>`;
+                }).join('') : (item.image || (item.memo && !item.life) ? '<span class="text-xs text-gray-400"><i class="fa-solid fa-check mr-1"></i>成分なし</span>' : '');
+
                 let lifeLogHtml = ''; const life = item.life || {};
                 if (life.sleepTime) { const qMap = { good: '良', normal: '普', bad: '悪' }; const qText = qMap[life.sleepQuality] ? `(${qMap[life.sleepQuality]})` : ''; lifeLogHtml += `<span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-bed mr-1"></i>${life.sleepTime}h ${qText}</span>`; }
                 if (life.steps) { lifeLogHtml += `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-shoe-prints mr-1"></i>${life.steps}歩</span>`; }
-                
-                // ★ストレス表示
-                if (life.stress) {
-                    const s = parseInt(life.stress);
-                    let color = 'bg-green-50 text-green-700';
-                    if(s >= 4) color = 'bg-yellow-50 text-yellow-700';
-                    if(s >= 8) color = 'bg-red-50 text-red-700';
-                    lifeLogHtml += `<span class="text-xs ${color} px-2 py-1 rounded mr-2 mb-1 inline-block font-bold"><i class="fa-solid fa-bolt mr-1"></i>Lv.${s}</span>`;
-                }
-
+                if (life.stress) { const s = parseInt(life.stress); let color='bg-green-50 text-green-700'; if(s>=4)color='bg-yellow-50 text-yellow-700'; if(s>=8)color='bg-red-50 text-red-700'; lifeLogHtml += `<span class="text-xs ${color} px-2 py-1 rounded mr-2 mb-1 inline-block font-bold"><i class="fa-solid fa-bolt mr-1"></i>Lv.${s}</span>`; }
                 if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-person-running mr-1"></i>${life.exercise}</span>`; }
                 if (life.medication) { lifeLogHtml += `<span class="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pills mr-1"></i>${life.medication}</span>`; }
                 
                 const imageHtml = item.image ? `<img src="${item.image}" class="w-20 h-20 object-cover rounded-lg bg-gray-200 border border-gray-100">` : `<div class="w-20 h-20 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300"><i class="fa-solid fa-notes-medical text-2xl"></i></div>`;
                 const memoHtml = item.memo ? `<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded border border-gray-100"><i class="fa-regular fa-comment mr-1 text-gray-400"></i>${item.memo}</p>` : '';
-                const html = `<div class="bg-white rounded-xl shadow-sm p-4 relative"><button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button><div class="flex gap-4 items-start mb-2">${imageHtml}<div class="flex-1 min-w-0 pt-1"><p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${item.date}</p><div class="flex flex-wrap gap-1.5 mb-2">${tagsHtml}</div><div class="flex flex-wrap gap-y-1">${lifeLogHtml}</div></div></div>${memoHtml}</div>`;
+                const html = `<div class="bg-white rounded-xl shadow-sm p-4 relative"><button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button><div class="flex gap-4 items-start mb-2">${imageHtml}<div class="flex-1 min-w-0 pt-1"><p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${item.date}</p><div class="flex flex-wrap mb-2">${tagsHtml}</div><div class="flex flex-wrap gap-y-1">${lifeLogHtml}</div></div></div>${memoHtml}</div>`;
                 listContainer.insertAdjacentHTML('beforeend', html);
             });
         }
 
-        // --- Common ---
+        // --- API Analysis (Updated Prompt) ---
+        async function analyze() {
+            const apiKey = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'; const textMemo = document.getElementById('textInput').value.trim();
+            if (!apiKey) { alert('APIキーが設定されていません'); switchView('settings'); return; }
+            document.getElementById('loadingArea').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('hidden'); document.getElementById('resultArea').classList.add('hidden');
+            
+            // ★改良されたプロンプト: 全食材の列挙と自動タグ付け
+            const systemPrompt = `
+                あなたは消化器内科の専門知識を持つ管理栄養士です。
+                提供された料理の画像やテキストから、使われている【すべての食材】を具体的に推測してリストアップしてください。
+                
+                各食材について、IBS（過敏性腸症候群）の観点から以下のタグを末尾に付与してください。
+                - 高FODMAP食材の場合: "(高FODMAP)"
+                - 脂質が多い食材の場合: "(高脂質)"
+                - グルテンを含む場合: "(グルテン)"
+                - 辛味成分など刺激が強い場合: "(刺激物)"
+                - カフェインを含む場合: "(カフェイン)"
+                - 問題ない食材: タグなし
+                
+                回答は必ず JSON形式の配列 ["食材名 (タグ)", "食材名"] だけで出力してください。
+                例: ["玉ねぎ (高FODMAP)", "ニンニク (高FODMAP)", "豚バラ肉 (高脂質)", "白米", "卵", "カレールー (グルテン/高脂質)"]
+            `;
+            
+            let requestParts = [{ text: systemPrompt }]; if (textMemo) requestParts.push({ text: `【補足テキスト情報】\n${textMemo}` }); if (currentBase64) requestParts.push({ inline_data: { mime_type: "image/jpeg", data: currentBase64.split(',')[1] } });
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
+        }
+
+        // --- Other Functions ---
+        function displayResults(ingredients) { 
+            const container = document.getElementById('tagsContainer'); container.innerHTML = ''; 
+            if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; } 
+            else { 
+                const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン'];
+                ingredients.forEach(tag => { 
+                    const span = document.createElement('span'); 
+                    // 結果表示画面でも色分け
+                    let colorClass = 'bg-green-50 text-green-700 border-green-200';
+                    if (riskWords.some(word => tag.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
+                    span.className = `${colorClass} text-sm px-3 py-1 rounded-full border`;
+                    span.textContent = tag; 
+                    container.appendChild(span); 
+                }); 
+            } 
+            document.getElementById('resultArea').classList.remove('hidden'); 
+        }
         function loadMedicationHistory() { const list = JSON.parse(localStorage.getItem('medication_history') || '[]'); const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = ''; list.forEach(item => { const option = document.createElement('option'); option.value = item; datalist.appendChild(option); }); }
         function addToMedicationHistory(text) { if(!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]'); if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); } }
         function clearMedicationHistory() { if(!confirm('削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); }
         function saveSettings() { const key = document.getElementById('apiKeyInput').value.trim(); let model; if (isManualModelMode) model = document.getElementById('modelInput').value.trim(); else model = document.getElementById('modelSelect').value; if(!key || !model) { alert('未入力です'); return; } localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); alert('保存しました'); switchView('analyze'); }
         function loadSettings() { const key = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model'); if(key) document.getElementById('apiKeyInput').value = key; if (model) { const select = document.getElementById('modelSelect'); const optionExists = Array.from(select.options).some(opt => opt.value === model); if (optionExists) select.value = model; else { toggleModelInputMode(true); document.getElementById('modelInput').value = model; } } else { document.getElementById('modelSelect').value = "gemini-2.5-flash"; } }
         function toggleModelInputMode(forceManual = null) { const selectContainer = document.getElementById('modelSelectContainer'); const inputContainer = document.getElementById('modelInputContainer'); if (forceManual === null) isManualModelMode = !isManualModelMode; else isManualModelMode = forceManual; if (isManualModelMode) { selectContainer.classList.add('hidden'); inputContainer.classList.remove('hidden'); } else { selectContainer.classList.remove('hidden'); inputContainer.classList.add('hidden'); } }
-        async function fetchModels() {
-            const apiKey = document.getElementById('apiKeyInput').value.trim(); const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn');
-            if (!apiKey) { alert('APIキーを入力してください'); return; } statusEl.textContent = '取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true;
-            try { const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`; const res = await fetch(url); if(!res.ok) throw new Error(`Error: ${res.status}`); const data = await res.json(); const availableModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')).sort(); selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if(modelName.includes('gemini-3')||modelName.includes('pro-preview')) option.textContent+=' 🚀'; else if(modelName.includes('flash')) option.textContent+=' ⚡'; selectEl.appendChild(option); }); const best = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = best; if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `完了: ${availableModels.length}件`; statusEl.className = 'text-xs text-green-600 mt-2'; } catch (e) { console.error(e); statusEl.textContent = '失敗'; statusEl.className = 'text-xs text-red-500 mt-2'; alert('取得失敗'); } finally { btn.disabled = false; }
-        }
+        async function fetchModels() { const apiKey = document.getElementById('apiKeyInput').value.trim(); const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn'); if (!apiKey) { alert('APIキーを入力してください'); return; } statusEl.textContent = '取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true; try { const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`; const res = await fetch(url); if(!res.ok) throw new Error(`Error: ${res.status}`); const data = await res.json(); const availableModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')).sort(); selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if(modelName.includes('gemini-3')||modelName.includes('pro-preview')) option.textContent+=' 🚀'; else if(modelName.includes('flash')) option.textContent+=' ⚡'; selectEl.appendChild(option); }); const best = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = best; if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `完了: ${availableModels.length}件`; statusEl.className = 'text-xs text-green-600 mt-2'; } catch (e) { console.error(e); statusEl.textContent = '失敗'; statusEl.className = 'text-xs text-red-500 mt-2'; alert('取得失敗'); } finally { btn.disabled = false; } }
         function handleImageSelect(event) { const file = event.target.files[0]; if (!file) return; resizeImage(file).then(resizedBase64 => { currentBase64 = resizedBase64; const imgEl = document.getElementById('previewImage'); imgEl.src = currentBase64; imgEl.classList.remove('hidden'); document.getElementById('uploadPlaceholder').classList.add('hidden'); document.getElementById('removeImageBtn').classList.remove('hidden'); document.getElementById('imageUploadLabel').classList.add('border-blue-500'); checkAnalyzeable(); document.getElementById('resultArea').classList.add('hidden'); }); event.target.value = ''; }
         function removeImage(event) { event.preventDefault(); currentBase64 = null; document.getElementById('previewImage').src = ''; document.getElementById('previewImage').classList.add('hidden'); document.getElementById('uploadPlaceholder').classList.remove('hidden'); document.getElementById('removeImageBtn').classList.add('hidden'); document.getElementById('imageUploadLabel').classList.remove('border-blue-500'); checkAnalyzeable(); }
         function checkAnalyzeable() { const text = document.getElementById('textInput').value.trim(); document.getElementById('analyzeBtn').disabled = !(currentBase64 || text.length > 0); }
         function resizeImage(file, maxWidth = 800) { return new Promise((resolve) => { const img = new Image(); img.src = URL.createObjectURL(file); img.onload = () => { const canvas = document.createElement('canvas'); let w = img.width, h = img.height; if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }); }
-        async function analyze() {
-            const apiKey = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'; const textMemo = document.getElementById('textInput').value.trim();
-            if (!apiKey) { alert('APIキーが設定されていません'); switchView('settings'); return; }
-            document.getElementById('loadingArea').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('hidden'); document.getElementById('resultArea').classList.add('hidden');
-            const systemPrompt = `あなたは消化器内科の専門知識を持つ栄養士です。提供された料理の画像、またはテキスト情報（あるいはその両方）を解析し、胃腸に負担をかける可能性のある成分を特定してください。対象となる成分の例：脂質、カプサイシン（辛味成分）、乳糖、グルテン、カフェイン、高FODMAP食材、強い酸味、消化の悪い繊維質など。回答は必ず以下のJSONフォーマットの配列のみを出力してください。["成分A", "成分B", "成分C"] もし特に該当する成分がなければ空の配列 [] を返してください。`;
-            let requestParts = [{ text: systemPrompt }]; if (textMemo) requestParts.push({ text: `【補足テキスト情報】\n${textMemo}` }); if (currentBase64) requestParts.push({ inline_data: { mime_type: "image/jpeg", data: currentBase64.split(',')[1] } });
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
-        }
-        function displayResults(ingredients) { const container = document.getElementById('tagsContainer'); container.innerHTML = ''; if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; } else { ingredients.forEach(tag => { const span = document.createElement('span'); span.className = 'bg-red-100 text-red-700 text-sm font-semibold px-3 py-1 rounded-full'; span.textContent = tag; container.appendChild(span); }); } document.getElementById('resultArea').classList.remove('hidden'); }
-        function saveLog(isAnalyzed) {
-            if (!isAnalyzed) currentIngredients = [];
-            const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim();
-            if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録内容がありません'); return; }
-            if (medication) addToMedicationHistory(medication);
-            const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } };
-            let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50);
-            try { localStorage.setItem('food_history', JSON.stringify(history)); alert('記録しました'); resetAnalyzeView(); switchView('history'); } catch (e) { alert('容量上限です。古い履歴を削除してください。'); }
-        }
-        function resetAnalyzeView() {
-            currentBase64 = null; currentIngredients = []; document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = ''; 
-            document.getElementById('stressInput').value = 5; updateStressDisplay(5);
-            removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden'); document.getElementById('autoFillMessage').classList.add('hidden');
-        }
+        function saveLog(isAnalyzed) { if (!isAnalyzed) currentIngredients = []; const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim(); if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録内容がありません'); return; } if (medication) addToMedicationHistory(medication); const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } }; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50); try { localStorage.setItem('food_history', JSON.stringify(history)); alert('記録しました'); resetAnalyzeView(); switchView('history'); } catch (e) { alert('容量上限です。古い履歴を削除してください。'); } }
+        function resetAnalyzeView() { currentBase64 = null; currentIngredients = []; document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = ''; document.getElementById('stressInput').value = 5; updateStressDisplay(5); removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden'); document.getElementById('autoFillMessage').classList.add('hidden'); }
         function deleteLog(id) { if(!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); }
         function clearAllData() { if(!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
-        function updateStats() {
-            const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = '';
-            if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; }
-            const counts = {}; let totalDetected = 0; history.forEach(item => { if(item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } });
-            if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; }
-            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500'];
-            sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); });
-        }
+        function updateStats() { const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = ''; if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; } const counts = {}; let totalDetected = 0; history.forEach(item => { if(item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } }); if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; } const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500']; sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); }); }
     </script>
 </body>
 </html>
