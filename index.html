@@ -14,6 +14,11 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Datalistの矢印を常に表示させるハック (Chrome/Edge用) */
+        input::-webkit-calendar-picker-indicator {
+            opacity: 100;
+        }
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
@@ -67,9 +72,13 @@
                         <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-shoe-prints mr-1"></i>歩数(歩)</label>
                         <input type="number" id="stepsInput" placeholder="5000" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
                     </div>
+                    
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-pills mr-1"></i>薬・サプリ</label>
-                        <input type="text" id="medicationInput" placeholder="整腸剤など" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                        <div class="relative">
+                            <input type="text" id="medicationInput" list="medicationHistoryList" placeholder="選択または入力" autocomplete="off" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                            <datalist id="medicationHistoryList"></datalist>
+                        </div>
                     </div>
                 </div>
 
@@ -111,11 +120,12 @@
         <section id="view-settings" class="view-section">
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-sliders mr-2"></i>設定</h2>
+                
                 <div class="mb-6">
                     <label class="block text-sm font-bold mb-2 text-gray-700">Gemini API Key <span class="text-red-500">*</span></label>
                     <div class="relative"><input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"><i class="fa-solid fa-key absolute top-3.5 right-3 text-gray-300"></i></div>
                 </div>
-                <div class="mb-8">
+                <div class="mb-6">
                     <label class="block text-sm font-bold mb-2 text-gray-700">使用モデル</label>
                     <div id="modelSelectContainer" class="relative mb-2">
                         <select id="modelSelect" class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
@@ -131,9 +141,20 @@
                     </div>
                     <p id="modelFetchStatus" class="text-xs text-gray-400 mt-2 h-4"></p>
                 </div>
+
+                <div class="mb-8 pt-6 border-t border-gray-100">
+                    <label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label>
+                    <p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p>
+                    <div class="flex gap-2">
+                         <button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition">
+                            <i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット
+                        </button>
+                    </div>
+                </div>
+
                 <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v2.2</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v2.3</p></div>
         </section>
     </main>
     <nav class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 pb-safe">
@@ -149,30 +170,53 @@
             loadSettings();
             if(!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
             checkAnalyzeable();
-            // URLパラメータチェック
             checkUrlParams();
+            // ★追加: 薬リストの読み込み
+            loadMedicationHistory();
         });
 
-        // --- URLパラメータ読み取り (歩数対応版) ---
+        // --- URLパラメータ読み取り ---
         function checkUrlParams() {
             const params = new URLSearchParams(window.location.search);
             let hasData = false;
-
             if (params.has('sleep')) { document.getElementById('sleepTime').value = params.get('sleep'); hasData = true; }
             if (params.has('quality')) { document.getElementById('sleepQuality').value = params.get('quality'); hasData = true; }
-            
-            // ★追加: 歩数読み込み
-            if (params.has('steps')) { 
-                document.getElementById('stepsInput').value = params.get('steps'); 
-                hasData = true; 
-            }
-            
+            if (params.has('steps')) { document.getElementById('stepsInput').value = params.get('steps'); hasData = true; }
             if (params.has('exercise')) { document.getElementById('exerciseInput').value = params.get('exercise'); hasData = true; }
-            
             if (hasData) {
                 document.getElementById('autoFillMessage').classList.remove('hidden');
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
+        }
+
+        // --- 薬リスト管理 (追加機能) ---
+        function loadMedicationHistory() {
+            const list = JSON.parse(localStorage.getItem('medication_history') || '[]');
+            const datalist = document.getElementById('medicationHistoryList');
+            datalist.innerHTML = '';
+            list.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item;
+                datalist.appendChild(option);
+            });
+        }
+        
+        function addToMedicationHistory(text) {
+            if(!text) return;
+            let list = JSON.parse(localStorage.getItem('medication_history') || '[]');
+            // まだ保存されていない場合のみ追加
+            if (!list.includes(text)) {
+                list.push(text);
+                localStorage.setItem('medication_history', JSON.stringify(list));
+                loadMedicationHistory(); // リストを即時更新
+            }
+        }
+
+        function clearMedicationHistory() {
+            if(!confirm('保存された薬のリストをすべて削除しますか？')) return;
+            localStorage.removeItem('medication_history');
+            loadMedicationHistory();
+            alert('薬リストを削除しました');
         }
 
         function switchView(viewName) {
@@ -315,11 +359,15 @@
             const sleepQuality = document.getElementById('sleepQuality').value;
             const medication = document.getElementById('medicationInput').value.trim();
             const exercise = document.getElementById('exerciseInput').value.trim();
-            const steps = document.getElementById('stepsInput').value; // ★追加
+            const steps = document.getElementById('stepsInput').value;
             const textMemo = document.getElementById('textInput').value.trim();
             
-            // 入力チェック (何もなければ保存しない)
             if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録する内容がありません'); return; }
+
+            // ★追加: 薬の履歴保存
+            if (medication) {
+                addToMedicationHistory(medication);
+            }
             
             const newLog = { 
                 id: Date.now(), 
@@ -327,13 +375,7 @@
                 image: currentBase64, 
                 memo: textMemo, 
                 ingredients: currentIngredients, 
-                life: { 
-                    sleepTime: sleepTime, 
-                    sleepQuality: sleepQuality, 
-                    medication: medication, 
-                    exercise: exercise,
-                    steps: steps // ★追加
-                } 
+                life: { sleepTime, sleepQuality, medication, exercise, steps } 
             };
             let history = JSON.parse(localStorage.getItem('food_history') || '[]');
             history.unshift(newLog); history = history.slice(0, 50);
@@ -341,8 +383,7 @@
         }
         function resetAnalyzeView() {
             currentBase64 = null; currentIngredients = [];
-            document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; 
-            document.getElementById('stepsInput').value = ''; // ★追加
+            document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = '';
             removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden');
             document.getElementById('autoFillMessage').classList.add('hidden');
         }
@@ -353,16 +394,10 @@
             history.forEach(item => {
                 const tagsHtml = item.ingredients && item.ingredients.length > 0 ? item.ingredients.map(t => `<span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-100">${t}</span>`).join('') : (item.image || item.memo ? '<span class="text-xs text-green-600"><i class="fa-solid fa-check mr-1"></i>成分なし</span>' : '');
                 let lifeLogHtml = ''; const life = item.life || {};
-                
-                // 睡眠
                 if (life.sleepTime) { const qMap = { good: '良', normal: '普', bad: '悪' }; const qText = qMap[life.sleepQuality] ? `(${qMap[life.sleepQuality]})` : ''; lifeLogHtml += `<span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-bed mr-1"></i>${life.sleepTime}h ${qText}</span>`; }
-                // ★追加: 歩数
                 if (life.steps) { lifeLogHtml += `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-shoe-prints mr-1"></i>${life.steps}歩</span>`; }
-                // 運動(その他)
                 if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-person-running mr-1"></i>${life.exercise}</span>`; }
-                // 薬
                 if (life.medication) { lifeLogHtml += `<span class="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pills mr-1"></i>${life.medication}</span>`; }
-                
                 const imageHtml = item.image ? `<img src="${item.image}" class="w-20 h-20 object-cover rounded-lg bg-gray-200 border border-gray-100">` : `<div class="w-20 h-20 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300"><i class="fa-solid fa-notes-medical text-2xl"></i></div>`;
                 const memoHtml = item.memo ? `<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded border border-gray-100"><i class="fa-regular fa-comment mr-1 text-gray-400"></i>${item.memo}</p>` : '';
                 const html = `<div class="bg-white rounded-xl shadow-sm p-4 relative"><button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button><div class="flex gap-4 items-start mb-2">${imageHtml}<div class="flex-1 min-w-0 pt-1"><p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${item.date}</p><div class="flex flex-wrap gap-1.5 mb-2">${tagsHtml}</div><div class="flex flex-wrap gap-y-1">${lifeLogHtml}</div></div></div>${memoHtml}</div>`;

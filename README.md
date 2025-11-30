@@ -1,1 +1,0 @@
-# Gastro-Log-with-Gemini
