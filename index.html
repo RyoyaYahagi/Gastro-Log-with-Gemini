@@ -8,10 +8,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
-        main { padding-top: 70px; padding-bottom: 80px; }
+        /* メインのパディングを調整 (固定ヘッダー + 固定タブバーの分) */
+        main { padding-top: 130px; padding-bottom: 90px; }
         .view-section { display: none; }
         .view-section.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* ローディング */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         input::-webkit-calendar-picker-indicator { opacity: 100; }
@@ -23,15 +26,27 @@
         .calendar-day.selected { background-color: #eff6ff; border: 2px solid #3b82f6; font-weight: bold; }
         .calendar-day.today { background-color: #fff7ed; border: 1px solid #fdba74; }
         .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
+
+        /* 解析画面だけは上部の固定タブが不要なのでパディングを減らす */
+        #view-analyze, #view-settings { margin-top: -50px; } 
     </style>
 </head>
 <body class="text-gray-800 font-sans antialiased">
-    <header class="bg-white shadow-sm fixed top-0 left-0 w-full z-50">
-        <div class="max-w-md mx-auto px-4 h-16 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-blue-600 flex items-center"><i class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
-            <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
-        </div>
+    <header class="bg-white shadow-sm fixed top-0 left-0 w-full z-50 h-16 flex justify-between items-center px-4">
+        <h1 class="text-xl font-bold text-blue-600 flex items-center"><i class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
+        <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
     </header>
+
+    <div id="historyStickyTabs" class="hidden fixed top-16 left-0 w-full bg-gray-100 z-40 p-2 shadow-inner">
+        <div class="max-w-md mx-auto flex bg-white rounded-lg shadow-sm p-1">
+            <button onclick="toggleHistoryView('list')" id="btnViewList" class="flex-1 py-2 text-sm font-bold rounded-md bg-blue-600 text-white transition shadow-sm">
+                <i class="fa-solid fa-list-ul mr-1"></i>リスト
+            </button>
+            <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-50 transition">
+                <i class="fa-solid fa-calendar-days mr-1"></i>カレンダー
+            </button>
+        </div>
+    </div>
 
     <main class="max-w-md mx-auto p-4 min-h-screen">
         <section id="view-analyze" class="view-section active">
@@ -57,19 +72,14 @@
                     <div><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-bed mr-1"></i>睡眠時間(h)</label><input type="number" id="sleepTime" step="0.5" placeholder="7.0" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-star-half-stroke mr-1"></i>睡眠の質</label>
-                        <select id="sleepQuality" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
-                            <option value="">-</option><option value="good">良い</option><option value="normal">普通</option><option value="bad">悪い</option>
-                        </select>
+                        <select id="sleepQuality" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><option value="">-</option><option value="good">良い</option><option value="normal">普通</option><option value="bad">悪い</option></select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3 mb-3">
                     <div><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-shoe-prints mr-1"></i>歩数(歩)</label><input type="number" id="stepsInput" placeholder="5000" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
                     <div>
                         <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-pills mr-1"></i>薬・サプリ</label>
-                        <div class="relative">
-                            <input type="text" id="medicationInput" list="medicationHistoryList" placeholder="選択または入力" autocomplete="off" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
-                            <datalist id="medicationHistoryList"></datalist>
-                        </div>
+                        <div class="relative"><input type="text" id="medicationInput" list="medicationHistoryList" placeholder="選択/入力" autocomplete="off" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><datalist id="medicationHistoryList"></datalist></div>
                     </div>
                 </div>
                 <div class="mb-6"><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-person-walking mr-1"></i>その他の運動</label><input type="text" id="exerciseInput" placeholder="例: ヨガ15分" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
@@ -90,11 +100,6 @@
         </section>
 
         <section id="view-history" class="view-section">
-            <div class="flex bg-white rounded-xl shadow-sm p-1 mb-4">
-                <button onclick="toggleHistoryView('list')" id="btnViewList" class="flex-1 py-2 text-sm font-bold rounded-lg bg-blue-50 text-blue-600 transition"><i class="fa-solid fa-list-ul mr-1"></i>リスト</button>
-                <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar" class="flex-1 py-2 text-sm font-bold rounded-lg text-gray-400 hover:bg-gray-50 transition"><i class="fa-solid fa-calendar-days mr-1"></i>カレンダー</button>
-            </div>
-
             <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>成分ランキング (TOP 5)</h2>
                 <div id="statsContainer" class="space-y-3"></div>
@@ -110,11 +115,10 @@
                     <span class="text-red-400">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-blue-400">土</span>
                 </div>
                 <div id="calendarGrid" class="calendar-grid"></div>
-                
                 <div class="mt-4 flex justify-center gap-4 text-xs text-gray-500">
                     <div class="flex items-center"><div class="dot bg-red-500 mr-1"></div>注意あり</div>
                     <div class="flex items-center"><div class="dot bg-green-500 mr-1"></div>良好</div>
-                    <div class="flex items-center"><div class="dot bg-blue-400 mr-1"></div>生活ログのみ</div>
+                    <div class="flex items-center"><div class="dot bg-blue-400 mr-1"></div>ログのみ</div>
                 </div>
             </div>
 
@@ -130,9 +134,10 @@
                 <div class="mb-8 pt-6 border-t border-gray-100"><label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label><p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p><div class="flex gap-2"><button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div></div>
                 <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.0</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.1</p></div>
         </section>
     </main>
+
     <nav class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 pb-safe">
         <div class="max-w-md mx-auto flex justify-around items-center h-16">
             <button onclick="switchView('analyze')" class="nav-btn active flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-camera text-xl mb-1"></i><span class="text-xs font-bold">入力・解析</span></button>
@@ -140,14 +145,14 @@
             <button onclick="switchView('settings')" class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-gear text-xl mb-1"></i><span class="text-xs font-bold">設定</span></button>
         </div>
     </nav>
+
     <script>
         let currentBase64 = null; let currentIngredients = []; let isManualModelMode = false;
-        
-        // カレンダー用変数
+        // カレンダー用
         let currentYear = new Date().getFullYear();
-        let currentMonth = new Date().getMonth(); // 0-11
-        let currentViewMode = 'list'; // 'list' or 'calendar'
-        let selectedDate = null; // 絞り込み中の日付(Dateオブジェクト)
+        let currentMonth = new Date().getMonth();
+        let currentViewMode = 'list';
+        let selectedDate = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadSettings();
@@ -155,7 +160,7 @@
             checkAnalyzeable(); checkUrlParams(); loadMedicationHistory();
         });
 
-        // --- URLパラメータ読み取り ---
+        // --- URL params ---
         function checkUrlParams() {
             const params = new URLSearchParams(window.location.search);
             let hasData = false;
@@ -166,21 +171,26 @@
             if (hasData) { document.getElementById('autoFillMessage').classList.remove('hidden'); window.history.replaceState({}, document.title, window.location.pathname); }
         }
 
-        // --- ビュー切り替え ---
+        // --- View Switching ---
         function switchView(viewName) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             updateNavStyles(viewName); window.scrollTo(0, 0);
-            if(viewName === 'history') { 
-                // 履歴画面を開いたときは、現在のモードで再描画
+
+            // 履歴タブ用固定バーの表示制御
+            const stickyTabs = document.getElementById('historyStickyTabs');
+            if (viewName === 'history') {
+                stickyTabs.classList.remove('hidden');
+                // モードに応じて再描画
                 if (currentViewMode === 'calendar') {
                     renderCalendar();
-                    // 選択日があればそのログ、なければ全ログ
                     renderHistory(selectedDate);
                 } else {
-                    renderHistory(); // 全リスト
+                    renderHistory();
                 }
                 updateStats();
+            } else {
+                stickyTabs.classList.add('hidden');
             }
         }
         function updateNavStyles(activeView) {
@@ -191,7 +201,7 @@
             if(navBtns[icons[activeView]]) { navBtns[icons[activeView]].classList.remove('text-gray-400'); navBtns[icons[activeView]].classList.add('text-blue-600'); }
         }
 
-        // --- 履歴表示モード切り替え (リスト vs カレンダー) ---
+        // --- Toggle History View ---
         function toggleHistoryView(mode) {
             currentViewMode = mode;
             const btnList = document.getElementById('btnViewList');
@@ -200,156 +210,99 @@
             const listTitle = document.getElementById('historyListTitle');
 
             if (mode === 'calendar') {
-                btnList.classList.replace('bg-blue-50', 'text-gray-400'); btnList.classList.replace('text-blue-600', 'hover:bg-gray-50');
-                btnCal.classList.replace('text-gray-400', 'bg-blue-50'); btnCal.classList.replace('hover:bg-gray-50', 'text-blue-600');
-                calContainer.classList.remove('hidden');
+                // Style Active: Calendar
+                btnList.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                btnList.classList.add('text-gray-500', 'hover:bg-gray-50');
+                btnCal.classList.remove('text-gray-500', 'hover:bg-gray-50');
+                btnCal.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
                 
-                // カレンダー描画
+                calContainer.classList.remove('hidden');
                 renderCalendar();
-                // 選択日リセット（初回は全表示、または当日など）
-                // ここでは「選択なし（全表示）」にするか、当日を選択状態にする
-                renderHistory(selectedDate); 
+                renderHistory(selectedDate);
                 listTitle.textContent = selectedDate ? `${selectedDate.getMonth()+1}/${selectedDate.getDate()} のログ` : "ログ一覧";
             } else {
-                btnCal.classList.replace('bg-blue-50', 'text-gray-400'); btnCal.classList.replace('text-blue-600', 'hover:bg-gray-50');
-                btnList.classList.replace('text-gray-400', 'bg-blue-50'); btnList.classList.replace('hover:bg-gray-50', 'text-blue-600');
+                // Style Active: List
+                btnCal.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                btnCal.classList.add('text-gray-500', 'hover:bg-gray-50');
+                btnList.classList.remove('text-gray-500', 'hover:bg-gray-50');
+                btnList.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+
                 calContainer.classList.add('hidden');
-                
-                // 全リスト表示
                 selectedDate = null;
                 renderHistory(null);
                 listTitle.textContent = "ログ一覧";
             }
         }
 
-        // --- カレンダーロジック ---
+        // --- Calendar Logic ---
         function renderCalendar() {
             const grid = document.getElementById('calendarGrid');
             const title = document.getElementById('calendarTitle');
             grid.innerHTML = '';
-            
             title.textContent = `${currentYear}年 ${currentMonth + 1}月`;
-
             const firstDay = new Date(currentYear, currentMonth, 1);
             const lastDay = new Date(currentYear, currentMonth + 1, 0);
             const daysInMonth = lastDay.getDate();
-            const startDayOfWeek = firstDay.getDay(); // 0(Sun) - 6(Sat)
-
-            // 履歴データの取得
+            const startDayOfWeek = firstDay.getDay(); 
             const history = JSON.parse(localStorage.getItem('food_history') || '[]');
-
-            // 空白セル (月初の前)
-            for (let i = 0; i < startDayOfWeek; i++) {
-                grid.appendChild(document.createElement('div'));
-            }
-
-            // 日付セル
             const today = new Date();
+
+            for (let i = 0; i < startDayOfWeek; i++) { grid.appendChild(document.createElement('div')); }
             for (let d = 1; d <= daysInMonth; d++) {
                 const dayDiv = document.createElement('div');
                 dayDiv.className = 'calendar-day';
                 dayDiv.textContent = d;
-
                 const thisDate = new Date(currentYear, currentMonth, d);
                 
-                // 今日の強調
-                if (thisDate.getFullYear() === today.getFullYear() && 
-                    thisDate.getMonth() === today.getMonth() && 
-                    thisDate.getDate() === today.getDate()) {
-                    dayDiv.classList.add('today');
-                }
+                if (thisDate.toDateString() === today.toDateString()) dayDiv.classList.add('today');
+                if (selectedDate && thisDate.toDateString() === selectedDate.toDateString()) dayDiv.classList.add('selected');
 
-                // 選択日の強調
-                if (selectedDate && 
-                    thisDate.getFullYear() === selectedDate.getFullYear() && 
-                    thisDate.getMonth() === selectedDate.getMonth() && 
-                    thisDate.getDate() === selectedDate.getDate()) {
-                    dayDiv.classList.add('selected');
-                }
-
-                // データのマーカー確認
-                // この日のデータがあるか検索
                 const dayLogs = history.filter(item => {
-                    const logDate = new Date(item.id); // IDがタイムスタンプ
-                    return logDate.getFullYear() === currentYear &&
-                           logDate.getMonth() === currentMonth &&
-                           logDate.getDate() === d;
+                    const logDate = new Date(item.id);
+                    return logDate.toDateString() === thisDate.toDateString();
                 });
 
                 if (dayLogs.length > 0) {
                     const dot = document.createElement('div');
                     dot.className = 'dot';
-                    
-                    // 色の判定ロジック
-                    // 1. 注意成分ありが一つでもあれば「赤」
-                    // 2. 注意成分なし(緑)があれば「緑」
-                    // 3. それ以外(画像なし、メモのみなど)は「青」
                     const hasWarning = dayLogs.some(item => item.ingredients && item.ingredients.length > 0);
                     const hasSafeFood = dayLogs.some(item => item.ingredients && item.ingredients.length === 0 && (item.image || item.memo));
-                    
-                    if (hasWarning) {
-                        dot.classList.add('bg-red-500');
-                    } else if (hasSafeFood) {
-                        dot.classList.add('bg-green-500');
-                    } else {
-                        dot.classList.add('bg-blue-400');
-                    }
+                    if (hasWarning) dot.classList.add('bg-red-500');
+                    else if (hasSafeFood) dot.classList.add('bg-green-500');
+                    else dot.classList.add('bg-blue-400');
                     dayDiv.appendChild(dot);
                 }
-
-                // クリックイベント
                 dayDiv.onclick = () => {
-                    // 同じ日を再タップしたら選択解除
-                    if (selectedDate && selectedDate.getDate() === d && selectedDate.getMonth() === currentMonth) {
-                        selectedDate = null;
-                    } else {
-                        selectedDate = new Date(currentYear, currentMonth, d);
-                    }
-                    renderCalendar(); // 選択状態更新のため再描画
+                    if (selectedDate && selectedDate.toDateString() === thisDate.toDateString()) selectedDate = null;
+                    else selectedDate = new Date(currentYear, currentMonth, d);
+                    renderCalendar();
                     renderHistory(selectedDate);
-                    
                     const listTitle = document.getElementById('historyListTitle');
                     listTitle.textContent = selectedDate ? `${currentMonth + 1}/${d} のログ` : "ログ一覧";
                 };
-
                 grid.appendChild(dayDiv);
             }
         }
-
         function changeMonth(delta) {
             currentMonth += delta;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            } else if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
             renderCalendar();
         }
 
-        // --- 履歴表示 (フィルタリング対応) ---
+        // --- Render History ---
         function renderHistory(filterDate = null) {
             const rawHistory = JSON.parse(localStorage.getItem('food_history') || '[]');
             const listContainer = document.getElementById('historyList');
             listContainer.innerHTML = '';
-
             let history = rawHistory;
-
-            // 日付フィルタがある場合
             if (filterDate) {
                 history = rawHistory.filter(item => {
                     const d = new Date(item.id);
-                    return d.getFullYear() === filterDate.getFullYear() &&
-                           d.getMonth() === filterDate.getMonth() &&
-                           d.getDate() === filterDate.getDate();
+                    return d.toDateString() === filterDate.toDateString();
                 });
             }
-
-            if (history.length === 0) {
-                listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"><i class="fa-solid fa-utensils text-3xl mb-2 opacity-50"></i><p class="text-sm">この日の記録はありません</p></div>`;
-                return;
-            }
+            if (history.length === 0) { listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"><i class="fa-solid fa-utensils text-3xl mb-2 opacity-50"></i><p class="text-sm">記録はありません</p></div>`; return; }
 
             history.forEach(item => {
                 const tagsHtml = item.ingredients && item.ingredients.length > 0 ? item.ingredients.map(t => `<span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded border border-red-100">${t}</span>`).join('') : (item.image || (item.memo && !item.life) ? '<span class="text-xs text-green-600"><i class="fa-solid fa-check mr-1"></i>成分なし</span>' : '');
@@ -365,7 +318,7 @@
             });
         }
 
-        // --- その他の基本関数 ---
+        // --- Basic Functions (Copy from previous) ---
         function loadMedicationHistory() {
             const list = JSON.parse(localStorage.getItem('medication_history') || '[]');
             const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = '';
@@ -375,12 +328,12 @@
             if(!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]');
             if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); }
         }
-        function clearMedicationHistory() { if(!confirm('保存された薬のリストをすべて削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); alert('薬リストを削除しました'); }
+        function clearMedicationHistory() { if(!confirm('薬リストを削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); alert('削除しました'); }
         function saveSettings() {
             const key = document.getElementById('apiKeyInput').value.trim();
             let model; if (isManualModelMode) model = document.getElementById('modelInput').value.trim(); else model = document.getElementById('modelSelect').value;
-            if(!key) { alert('APIキーを入力してください'); return; } if(!model) { alert('モデルを選択または入力してください'); return; }
-            localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); alert('設定を保存しました'); switchView('analyze');
+            if(!key) { alert('APIキーを入力してください'); return; } if(!model) { alert('モデルを選択してください'); return; }
+            localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); alert('保存しました'); switchView('analyze');
         }
         function loadSettings() {
             const key = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model');
@@ -393,20 +346,18 @@
             if (isManualModelMode) { selectContainer.classList.add('hidden'); inputContainer.classList.remove('hidden'); } else { selectContainer.classList.remove('hidden'); inputContainer.classList.add('hidden'); }
         }
         async function fetchModels() {
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
-            const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn');
+            const apiKey = document.getElementById('apiKeyInput').value.trim(); const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn');
             if (!apiKey) { alert('APIキーを入力してください'); return; }
-            statusEl.textContent = 'モデル情報を取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true;
+            statusEl.textContent = '取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true;
             try {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
                 const res = await fetch(url); if(!res.ok) throw new Error(`Error: ${res.status}`);
                 const data = await res.json();
                 const availableModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')).sort();
-                if (availableModels.length === 0) throw new Error('利用可能なモデルが見つかりませんでした');
-                selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if(modelName.includes('gemini-3') || modelName.includes('pro-preview')) option.textContent += ' 🚀(New)'; else if(modelName.includes('flash') && !modelName.includes('legacy')) option.textContent += ' ⚡'; selectEl.appendChild(option); });
-                const bestModel = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = bestModel;
-                if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `取得成功! ${availableModels.length}個のモデルが見つかりました`; statusEl.className = 'text-xs text-green-600 mt-2';
-            } catch (e) { console.error(e); statusEl.textContent = `取得失敗: ${e.message}`; statusEl.className = 'text-xs text-red-500 mt-2'; alert('モデル一覧の取得に失敗しました。'); } finally { btn.disabled = false; }
+                selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if(modelName.includes('gemini-3')||modelName.includes('pro-preview')) option.textContent+=' 🚀'; else if(modelName.includes('flash')) option.textContent+=' ⚡'; selectEl.appendChild(option); });
+                const best = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = best;
+                if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `完了: ${availableModels.length}件`; statusEl.className = 'text-xs text-green-600 mt-2';
+            } catch (e) { console.error(e); statusEl.textContent = '失敗'; statusEl.className = 'text-xs text-red-500 mt-2'; alert('取得失敗'); } finally { btn.disabled = false; }
         }
         function handleImageSelect(event) {
             const file = event.target.files[0]; if (!file) return;
@@ -417,34 +368,34 @@
         function resizeImage(file, maxWidth = 800) { return new Promise((resolve) => { const img = new Image(); img.src = URL.createObjectURL(file); img.onload = () => { const canvas = document.createElement('canvas'); let w = img.width, h = img.height; if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }); }
         async function analyze() {
             const apiKey = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'; const textMemo = document.getElementById('textInput').value.trim();
-            if (!apiKey) { alert('APIキーが設定されていません。'); switchView('settings'); return; }
+            if (!apiKey) { alert('APIキーが設定されていません'); switchView('settings'); return; }
             document.getElementById('loadingArea').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('hidden'); document.getElementById('resultArea').classList.add('hidden');
             const systemPrompt = `あなたは消化器内科の専門知識を持つ栄養士です。提供された料理の画像、またはテキスト情報（あるいはその両方）を解析し、胃腸に負担をかける可能性のある成分を特定してください。対象となる成分の例：脂質、カプサイシン（辛味成分）、乳糖、グルテン、カフェイン、高FODMAP食材、強い酸味、消化の悪い繊維質など。回答は必ず以下のJSONフォーマットの配列のみを出力してください。["成分A", "成分B", "成分C"] もし特に該当する成分がなければ空の配列 [] を返してください。`;
             let requestParts = [{ text: systemPrompt }]; if (textMemo) requestParts.push({ text: `【補足テキスト情報】\n${textMemo}` }); if (currentBase64) requestParts.push({ inline_data: { mime_type: "image/jpeg", data: currentBase64.split(',')[1] } });
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { if (response.status === 429) throw new Error('レート制限(使いすぎ)です。時間をおいてください。'); if (response.status === 503) throw new Error('サーバー混雑中。'); const errData = await response.json(); throw new Error(errData.error?.message || `API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('Geminiからの応答が空でした。'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; alert("解析結果の形式が不正でした。"); } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
+            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
         }
-        function displayResults(ingredients) { const container = document.getElementById('tagsContainer'); container.innerHTML = ''; if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm flex items-center"><i class="fa-regular fa-face-smile mr-1"></i>特になし (胃腸に優しい可能性が高いです)</span>'; } else { ingredients.forEach(tag => { const span = document.createElement('span'); span.className = 'bg-red-100 text-red-700 text-sm font-semibold px-3 py-1 rounded-full border border-red-200'; span.textContent = tag.length > 15 ? tag.substring(0,15) + '...' : tag; container.appendChild(span); }); } document.getElementById('resultArea').classList.remove('hidden'); }
+        function displayResults(ingredients) { const container = document.getElementById('tagsContainer'); container.innerHTML = ''; if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; } else { ingredients.forEach(tag => { const span = document.createElement('span'); span.className = 'bg-red-100 text-red-700 text-sm font-semibold px-3 py-1 rounded-full'; span.textContent = tag; container.appendChild(span); }); } document.getElementById('resultArea').classList.remove('hidden'); }
         function saveLog(isAnalyzed) {
             if (!isAnalyzed) currentIngredients = [];
             const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const textMemo = document.getElementById('textInput').value.trim();
-            if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録する内容がありません'); return; }
-            if (medication) { addToMedicationHistory(medication); }
+            if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録内容がありません'); return; }
+            if (medication) addToMedicationHistory(medication);
             const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps } };
             let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50);
-            try { localStorage.setItem('food_history', JSON.stringify(history)); alert('記録しました'); resetAnalyzeView(); switchView('history'); } catch (e) { alert('保存容量の上限です。古い履歴を削除してください。'); }
+            try { localStorage.setItem('food_history', JSON.stringify(history)); alert('記録しました'); resetAnalyzeView(); switchView('history'); } catch (e) { alert('容量上限です。古い履歴を削除してください。'); }
         }
         function resetAnalyzeView() {
             currentBase64 = null; currentIngredients = []; document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = '';
             removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden'); document.getElementById('autoFillMessage').classList.add('hidden');
         }
-        function deleteLog(id) { if(!confirm('この記録を削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderHistory(selectedDate); updateStats(); renderCalendar(); }
-        function clearAllData() { if(!confirm('すべての履歴データを削除しますか？')) return; localStorage.removeItem('food_history'); renderHistory(); updateStats(); renderCalendar(); }
+        function deleteLog(id) { if(!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); }
+        function clearAllData() { if(!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
         function updateStats() {
             const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = '';
-            if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データが集まるとここにランキングが表示されます</p>'; return; }
+            if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; }
             const counts = {}; let totalDetected = 0; history.forEach(item => { if(item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } });
-            if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">まだ注意成分は検出されていません</p>'; return; }
+            if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; }
             const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500'];
             sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); });
         }
