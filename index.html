@@ -24,8 +24,6 @@
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -8px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
-        
-        /* 削除可能タグのアニメーション */
         .tag-removable { cursor: pointer; transition: all 0.2s; }
         .tag-removable:hover { opacity: 0.7; transform: scale(0.95); }
         .tag-removable::after { content: '\f00d'; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-left: 6px; opacity: 0.5; font-size: 0.8em; }
@@ -84,7 +82,10 @@
                         <div class="relative"><input type="text" id="medicationInput" list="medicationHistoryList" placeholder="選択/入力" autocomplete="off" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><datalist id="medicationHistoryList"></datalist></div>
                     </div>
                 </div>
-                <div class="mb-6"><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-person-walking mr-1"></i>その他の運動</label><input type="text" id="exerciseInput" placeholder="例: ヨガ15分" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-pen-to-square mr-1"></i>ひとことメモ (運動・体調など)</label>
+                    <input type="text" id="exerciseInput" placeholder="例: お腹が張る, ヨガ15分" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                </div>
 
                 <div id="loadingArea" class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4"><div class="loader mb-3"></div><p class="text-sm text-blue-600 font-bold animate-pulse">成分を詳細分析中...</p></div>
                 <div class="flex gap-3" id="actionButtons">
@@ -144,7 +145,7 @@
                 <div class="mb-8 pt-6 border-t border-gray-100"><label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label><p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p><div class="flex gap-2"><button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div></div>
                 <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.5</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.6</p></div>
         </section>
     </main>
 
@@ -261,7 +262,8 @@
                 if (life.sleepTime) { const qMap = { good: '良', normal: '普', bad: '悪' }; const qText = qMap[life.sleepQuality] ? `(${qMap[life.sleepQuality]})` : ''; lifeLogHtml += `<span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-bed mr-1"></i>${life.sleepTime}h ${qText}</span>`; }
                 if (life.steps) { lifeLogHtml += `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-shoe-prints mr-1"></i>${life.steps}歩</span>`; }
                 if (life.stress) { const s = parseInt(life.stress); let color='bg-green-50 text-green-700'; if(s>=4)color='bg-yellow-50 text-yellow-700'; if(s>=8)color='bg-red-50 text-red-700'; lifeLogHtml += `<span class="text-xs ${color} px-2 py-1 rounded mr-2 mb-1 inline-block font-bold"><i class="fa-solid fa-bolt mr-1"></i>Lv.${s}</span>`; }
-                if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-person-running mr-1"></i>${life.exercise}</span>`; }
+                // ★アイコン変更
+                if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pen mr-1"></i>${life.exercise}</span>`; }
                 if (life.medication) { lifeLogHtml += `<span class="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pills mr-1"></i>${life.medication}</span>`; }
                 
                 const imageHtml = item.image ? `<img src="${item.image}" class="w-20 h-20 object-cover rounded-lg bg-gray-200 border border-gray-100">` : `<div class="w-20 h-20 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300"><i class="fa-solid fa-notes-medical text-2xl"></i></div>`;
@@ -281,33 +283,25 @@
             try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
         }
 
-        // --- ★修正: 削除機能 ---
+        // 削除機能はそのまま
         function displayResults(ingredients) { 
             const container = document.getElementById('tagsContainer'); container.innerHTML = ''; 
             if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; } 
             else { 
                 const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン'];
-                ingredients.forEach((tag, index) => { // indexを受け取る
+                ingredients.forEach((tag, index) => { 
                     const span = document.createElement('span'); 
                     let colorClass = 'bg-green-50 text-green-700 border-green-200';
                     if (riskWords.some(word => tag.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
-                    span.className = `${colorClass} text-sm px-3 py-1 rounded-full border tag-removable`; // クラス追加
+                    span.className = `${colorClass} text-sm px-3 py-1 rounded-full border tag-removable`; 
                     span.textContent = tag; 
-                    // タップで削除 (インデックス指定)
                     span.onclick = function() { removeIngredient(index); };
                     container.appendChild(span); 
                 }); 
             } 
             document.getElementById('resultArea').classList.remove('hidden'); 
         }
-
-        // --- ★新機能: タグ削除 ---
-        function removeIngredient(index) {
-            if (index > -1) {
-                currentIngredients.splice(index, 1); // 配列から削除
-                displayResults(currentIngredients); // 再描画
-            }
-        }
+        function removeIngredient(index) { if (index > -1) { currentIngredients.splice(index, 1); displayResults(currentIngredients); } }
 
         function loadMedicationHistory() { const list = JSON.parse(localStorage.getItem('medication_history') || '[]'); const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = ''; list.forEach(item => { const option = document.createElement('option'); option.value = item; datalist.appendChild(option); }); }
         function addToMedicationHistory(text) { if(!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]'); if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); } }
