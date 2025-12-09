@@ -1,38 +1,221 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gastro Log (Gemini AI)</title>
+    <meta name="description" content="Gemini AIを活用した食事・体調管理アプリ。食材成分の解析やIBS（過敏性腸症候群）に配慮した食事記録が可能。">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
-        main { padding-top: 80px; padding-bottom: 90px; }
-        .view-section { display: none; }
-        .view-section.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        input::-webkit-calendar-picker-indicator { opacity: 100; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-        .calendar-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: start; padding-top: 4px; border-radius: 8px; font-size: 0.8rem; position: relative; cursor: pointer; }
-        .calendar-day:hover { background-color: #f3f4f6; }
-        .calendar-day.selected { background-color: #eff6ff; border: 2px solid #3b82f6; font-weight: bold; }
-        .calendar-day.today { background-color: #fff7ed; border: 1px solid #fdba74; }
-        .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -8px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e5e7eb; border-radius: 2px; }
-        .tag-removable { cursor: pointer; transition: all 0.2s; }
-        .tag-removable:hover { opacity: 0.7; transform: scale(0.95); }
-        .tag-removable::after { content: '\f00d'; font-family: "Font Awesome 6 Free"; font-weight: 900; margin-left: 6px; opacity: 0.5; font-size: 0.8em; }
+        body {
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+
+        main {
+            padding-top: 80px;
+            padding-bottom: 90px;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        input::-webkit-calendar-picker-indicator {
+            opacity: 100;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: start;
+            padding-top: 4px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .calendar-day:hover {
+            background-color: #f3f4f6;
+        }
+
+        .calendar-day.selected {
+            background-color: #eff6ff;
+            border: 2px solid #3b82f6;
+            font-weight: bold;
+        }
+
+        .calendar-day.today {
+            background-color: #fff7ed;
+            border: 1px solid #fdba74;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 2px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+
+        .tag-removable {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tag-removable:hover {
+            opacity: 0.7;
+            transform: scale(0.95);
+        }
+
+        .tag-removable::after {
+            content: '\f00d';
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            margin-left: 6px;
+            opacity: 0.5;
+            font-size: 0.8em;
+        }
+
+        /* Toast通知 */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: #1f2937;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            margin-bottom: 8px;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .toast.success {
+            background: #059669;
+        }
+
+        .toast.error {
+            background: #dc2626;
+        }
+
+        .toast.warning {
+            background: #d97706;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes toastOut {
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
+
 <body class="text-gray-800 font-sans antialiased">
     <header class="bg-white shadow-sm fixed top-0 left-0 w-full z-50 h-16 flex justify-between items-center px-4">
-        <h1 class="text-xl font-bold text-blue-600 flex items-center"><i class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
-        <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
+        <h1 class="text-xl font-bold text-blue-600 flex items-center"><i
+                class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
+        <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"
+            aria-label="履歴を削除"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
     </header>
 
     <main class="max-w-md mx-auto p-4 min-h-screen">
@@ -40,68 +223,112 @@
             <div class="bg-white rounded-xl shadow-sm p-5 mb-6">
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">食事・写真</h2>
                 <div class="mb-4">
-                    <label for="cameraInput" id="imageUploadLabel" class="cursor-pointer block w-full h-40 border-2 border-dashed border-blue-200 rounded-xl flex flex-col justify-center items-center hover:bg-blue-50 transition relative overflow-hidden bg-gray-50">
-                        <div id="uploadPlaceholder" class="flex flex-col items-center text-gray-400"><i class="fa-solid fa-camera text-2xl mb-2"></i><span class="text-xs">写真を撮影・選択</span></div>
-                        <img id="previewImage" class="hidden absolute inset-0 w-full h-full object-cover" />
-                        <button id="removeImageBtn" onclick="removeImage(event)" class="hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-red-600 transition"><i class="fa-solid fa-xmark"></i></button>
+                    <label for="cameraInput" id="imageUploadLabel"
+                        class="cursor-pointer block w-full h-40 border-2 border-dashed border-blue-200 rounded-xl flex flex-col justify-center items-center hover:bg-blue-50 transition relative overflow-hidden bg-gray-50">
+                        <div id="uploadPlaceholder" class="flex flex-col items-center text-gray-400"><i
+                                class="fa-solid fa-camera text-2xl mb-2"></i><span class="text-xs">写真を撮影・選択</span></div>
+                        <img id="previewImage" class="hidden absolute inset-0 w-full h-full object-cover"
+                            alt="食事のプレビュー画像" />
+                        <button id="removeImageBtn" onclick="removeImage(event)"
+                            class="hidden absolute top-2 right-2 bg-gray-800 bg-opacity-60 text-white rounded-full w-8 h-8 flex items-center justify-center z-10 hover:bg-red-600 transition"
+                            aria-label="画像を削除"><i class="fa-solid fa-xmark"></i></button>
                     </label>
-                    <input type="file" id="cameraInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                    <input type="file" id="cameraInput" accept="image/*" class="hidden"
+                        onchange="handleImageSelect(event)">
                 </div>
                 <div class="mb-6 relative">
-                    <textarea id="textInput" rows="2" placeholder="食事のメモ（例: ラーメン大盛り、味濃いめ）" class="w-full p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50" oninput="checkAnalyzeable()"></textarea>
+                    <label for="textInput" class="sr-only">食事のメモ</label>
+                    <textarea id="textInput" rows="2" placeholder="食事のメモ（例: ラーメン大盛り、味濃いめ）"
+                        class="w-full p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                        oninput="checkAnalyzeable()"></textarea>
                 </div>
 
                 <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3 border-t pt-4">生活・体調ログ</h2>
-                <div id="autoFillMessage" class="hidden mb-3 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg text-xs flex items-center animate-pulse">
+                <div id="autoFillMessage"
+                    class="hidden mb-3 bg-indigo-50 text-indigo-700 px-3 py-2 rounded-lg text-xs flex items-center animate-pulse">
                     <i class="fa-solid fa-mobile-screen-button mr-2"></i>外部アプリからデータを読み込みました
                 </div>
-                
+
                 <div class="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <div class="flex justify-between items-center mb-2">
-                        <label class="block text-xs font-bold text-gray-600"><i class="fa-solid fa-bolt mr-1"></i>ストレスレベル</label>
-                        <span id="stressValueDisplay" class="text-sm font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-blue-100">5</span>
+                        <label for="stressInput" class="block text-xs font-bold text-gray-600"><i
+                                class="fa-solid fa-bolt mr-1"></i>ストレスレベル</label>
+                        <span id="stressValueDisplay"
+                            class="text-sm font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-blue-100">5</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-xs text-gray-400">低</span>
-                        <input type="range" id="stressInput" min="1" max="10" value="5" class="flex-1" oninput="updateStressDisplay(this.value)">
+                        <input type="range" id="stressInput" min="1" max="10" value="5" class="flex-1"
+                            oninput="updateStressDisplay(this.value)">
                         <span class="text-xs text-gray-400">高</span>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-bed mr-1"></i>睡眠時間(h)</label><input type="number" id="sleepTime" step="0.5" placeholder="7.0" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
+                    <div><label for="sleepTime" class="block text-xs font-bold text-gray-600 mb-1"><i
+                                class="fa-solid fa-bed mr-1"></i>睡眠時間(h)</label><input type="number" id="sleepTime"
+                            step="0.5" placeholder="7.0"
+                            class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-star-half-stroke mr-1"></i>睡眠の質</label>
-                        <select id="sleepQuality" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><option value="">-</option><option value="good">良い</option><option value="normal">普通</option><option value="bad">悪い</option></select>
+                        <label for="sleepQuality" class="block text-xs font-bold text-gray-600 mb-1"><i
+                                class="fa-solid fa-star-half-stroke mr-1"></i>睡眠の質</label>
+                        <select id="sleepQuality"
+                            class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                            <option value="">-</option>
+                            <option value="good">良い</option>
+                            <option value="normal">普通</option>
+                            <option value="bad">悪い</option>
+                        </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3 mb-3">
-                    <div><label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-shoe-prints mr-1"></i>歩数(歩)</label><input type="number" id="stepsInput" placeholder="5000" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
+                    <div><label for="stepsInput" class="block text-xs font-bold text-gray-600 mb-1"><i
+                                class="fa-solid fa-shoe-prints mr-1"></i>歩数(歩)</label><input type="number"
+                            id="stepsInput" placeholder="5000"
+                            class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"></div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-pills mr-1"></i>薬・サプリ</label>
-                        <div class="relative"><input type="text" id="medicationInput" list="medicationHistoryList" placeholder="選択/入力" autocomplete="off" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><datalist id="medicationHistoryList"></datalist></div>
+                        <label for="medicationInput" class="block text-xs font-bold text-gray-600 mb-1"><i
+                                class="fa-solid fa-pills mr-1"></i>薬・サプリ</label>
+                        <div class="relative"><input type="text" id="medicationInput" list="medicationHistoryList"
+                                placeholder="選択/入力" autocomplete="off"
+                                class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm"><datalist
+                                id="medicationHistoryList"></datalist></div>
                     </div>
                 </div>
                 <div class="mb-6">
-                    <label class="block text-xs font-bold text-gray-600 mb-1"><i class="fa-solid fa-pen-to-square mr-1"></i>ひとことメモ (運動・体調など)</label>
-                    <input type="text" id="exerciseInput" placeholder="例: お腹が張る, ヨガ15分" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                    <label for="exerciseInput" class="block text-xs font-bold text-gray-600 mb-1"><i
+                            class="fa-solid fa-pen-to-square mr-1"></i>ひとことメモ (運動・体調など)</label>
+                    <input type="text" id="exerciseInput" placeholder="例: お腹が張る, ヨガ15分"
+                        class="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm">
                 </div>
 
-                <div id="loadingArea" class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4"><div class="loader mb-3"></div><p class="text-sm text-blue-600 font-bold animate-pulse">成分を詳細分析中...</p></div>
+                <div id="loadingArea"
+                    class="hidden flex flex-col items-center justify-center py-6 bg-blue-50 rounded-xl mb-4">
+                    <div class="loader mb-3"></div>
+                    <p class="text-sm text-blue-600 font-bold animate-pulse">成分を詳細分析中...</p>
+                </div>
                 <div class="flex gap-3" id="actionButtons">
-                    <button onclick="saveLog(false)" id="quickSaveBtn" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 px-2 rounded-xl text-sm transition flex flex-col items-center justify-center"><span class="text-xs mb-0.5"><i class="fa-solid fa-pen mr-1"></i>解析せず</span>そのまま記録</button>
-                    <button onclick="analyze()" id="analyzeBtn" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center" disabled><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>詳細解析して記録</button>
+                    <button onclick="saveLog(false)" id="quickSaveBtn"
+                        class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 px-2 rounded-xl text-sm transition flex flex-col items-center justify-center"><span
+                            class="text-xs mb-0.5"><i class="fa-solid fa-pen mr-1"></i>解析せず</span>そのまま記録</button>
+                    <button onclick="analyze()" id="analyzeBtn"
+                        class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center"
+                        disabled><i class="fa-solid fa-wand-magic-sparkles mr-2"></i>詳細解析して記録</button>
                 </div>
             </div>
-            
-            <div id="resultArea" class="hidden bg-white rounded-xl shadow-sm border-l-4 border-green-500 overflow-hidden mb-8">
+
+            <div id="resultArea"
+                class="hidden bg-white rounded-xl shadow-sm border-l-4 border-green-500 overflow-hidden mb-8">
                 <div class="p-5">
                     <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-bold text-lg flex items-center"><i class="fa-solid fa-list-check text-green-500 mr-2"></i>検出された食材</h3>
+                        <h3 class="font-bold text-lg flex items-center"><i
+                                class="fa-solid fa-list-check text-green-500 mr-2"></i>検出された食材</h3>
                         <span class="text-xs text-gray-400">タップして削除 <i class="fa-regular fa-trash-can ml-1"></i></span>
                     </div>
                     <div id="tagsContainer" class="flex flex-wrap gap-2 mb-5"></div>
-                    <button onclick="saveLog(true)" class="w-full bg-green-50 hover:bg-green-100 text-green-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center transition"><i class="fa-solid fa-floppy-disk mr-2"></i>この内容で保存</button>
+                    <button onclick="saveLog(true)"
+                        class="w-full bg-green-50 hover:bg-green-100 text-green-700 font-bold py-3 px-4 rounded-xl flex items-center justify-center transition"><i
+                            class="fa-solid fa-floppy-disk mr-2"></i>この内容で保存</button>
                 </div>
             </div>
         </section>
@@ -109,61 +336,141 @@
         <section id="view-history" class="view-section">
             <div id="historyStickyTabs" class="sticky top-16 bg-gray-100 z-40 pb-4 pt-1">
                 <div class="flex bg-white rounded-lg shadow-sm p-1">
-                    <button onclick="toggleHistoryView('list')" id="btnViewList" class="flex-1 py-2 text-sm font-bold rounded-md bg-blue-600 text-white transition shadow-sm"><i class="fa-solid fa-list-ul mr-1"></i>リスト</button>
-                    <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar" class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-50 transition"><i class="fa-solid fa-calendar-days mr-1"></i>カレンダー</button>
+                    <button onclick="toggleHistoryView('list')" id="btnViewList"
+                        class="flex-1 py-2 text-sm font-bold rounded-md bg-blue-600 text-white transition shadow-sm"><i
+                            class="fa-solid fa-list-ul mr-1"></i>リスト</button>
+                    <button onclick="toggleHistoryView('calendar')" id="btnViewCalendar"
+                        class="flex-1 py-2 text-sm font-bold rounded-md text-gray-500 hover:bg-gray-50 transition"><i
+                            class="fa-solid fa-calendar-days mr-1"></i>カレンダー</button>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm p-5 mb-6 z-0">
-                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i class="fa-solid fa-chart-simple mr-2"></i>よく摂る成分 (TOP 5)</h2>
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 flex items-center"><i
+                        class="fa-solid fa-chart-simple mr-2"></i>よく摂る成分 (TOP 5)</h2>
                 <div id="statsContainer" class="space-y-3"></div>
             </div>
             <div id="calendarContainer" class="hidden bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div class="flex justify-between items-center mb-4">
-                    <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-blue-600 p-2"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button onclick="changeMonth(-1)" class="text-gray-400 hover:text-blue-600 p-2" aria-label="前の月へ"><i
+                            class="fa-solid fa-chevron-left"></i></button>
                     <h2 id="calendarTitle" class="text-lg font-bold text-gray-700"></h2>
-                    <button onclick="changeMonth(1)" class="text-gray-400 hover:text-blue-600 p-2"><i class="fa-solid fa-chevron-right"></i></button>
+                    <button onclick="changeMonth(1)" class="text-gray-400 hover:text-blue-600 p-2" aria-label="次の月へ"><i
+                            class="fa-solid fa-chevron-right"></i></button>
                 </div>
                 <div class="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-bold text-gray-400">
-                    <span class="text-red-400">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="text-blue-400">土</span>
+                    <span
+                        class="text-red-400">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span
+                        class="text-blue-400">土</span>
                 </div>
                 <div id="calendarGrid" class="calendar-grid"></div>
                 <div class="mt-4 flex justify-center gap-4 text-xs text-gray-500">
-                    <div class="flex items-center"><div class="dot bg-red-500 mr-1"></div>注意あり</div>
-                    <div class="flex items-center"><div class="dot bg-green-500 mr-1"></div>良好</div>
-                    <div class="flex items-center"><div class="dot bg-blue-400 mr-1"></div>ログのみ</div>
+                    <div class="flex items-center">
+                        <div class="dot bg-red-500 mr-1"></div>注意あり
+                    </div>
+                    <div class="flex items-center">
+                        <div class="dot bg-green-500 mr-1"></div>良好
+                    </div>
+                    <div class="flex items-center">
+                        <div class="dot bg-blue-400 mr-1"></div>ログのみ
+                    </div>
                 </div>
             </div>
-            <h2 id="historyListTitle" class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 pl-2">記録ログ</h2>
+            <h2 id="historyListTitle" class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-4 pl-2">記録ログ
+            </h2>
             <div id="historyList" class="space-y-4"></div>
         </section>
 
         <section id="view-settings" class="view-section">
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-sliders mr-2"></i>設定</h2>
-                <div class="mb-6"><label class="block text-sm font-bold mb-2 text-gray-700">Gemini API Key <span class="text-red-500">*</span></label><div class="relative"><input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"><i class="fa-solid fa-key absolute top-3.5 right-3 text-gray-300"></i></div></div>
-                <div class="mb-6"><label class="block text-sm font-bold mb-2 text-gray-700">使用モデル</label><div id="modelSelectContainer" class="relative mb-2"><select id="modelSelect" class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"><option value="gemini-2.5-flash">gemini-2.5-flash (推奨)</option><option value="gemini-2.0-flash">gemini-2.0-flash</option></select><i class="fa-solid fa-chevron-down absolute top-4 right-4 text-gray-400 pointer-events-none"></i></div><div id="modelInputContainer" class="relative mb-2 hidden"><input type="text" id="modelInput" placeholder="モデル名を手入力" class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><i class="fa-solid fa-robot absolute top-3.5 right-3 text-gray-300"></i></div><div class="flex gap-2"><button onclick="fetchModels()" id="fetchModelsBtn" class="flex-1 text-xs bg-blue-50 text-blue-700 font-bold px-3 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center"><i class="fa-solid fa-cloud-arrow-down mr-1"></i>モデル一覧を更新</button><button onclick="toggleModelInputMode()" class="text-xs bg-gray-100 text-gray-500 font-bold px-3 py-2.5 rounded-lg hover:bg-gray-200 transition"><i class="fa-solid fa-pen mr-1"></i>手入力</button></div><p id="modelFetchStatus" class="text-xs text-gray-400 mt-2 h-4"></p></div>
-                <div class="mb-8 pt-6 border-t border-gray-100"><label class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label><p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p><div class="flex gap-2"><button onclick="clearMedicationHistory()" class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div></div>
-                <button onclick="saveSettings()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
+                <div class="mb-6"><label for="apiKeyInput" class="block text-sm font-bold mb-2 text-gray-700">Gemini API
+                        Key <span class="text-red-500">*</span></label>
+                    <div class="relative"><input type="password" id="apiKeyInput" placeholder="AIzaSy..."
+                            class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"><i
+                            class="fa-solid fa-key absolute top-3.5 right-3 text-gray-300"></i></div>
+                </div>
+                <div class="mb-6"><label for="modelSelect"
+                        class="block text-sm font-bold mb-2 text-gray-700">使用モデル</label>
+                    <div id="modelSelectContainer" class="relative mb-2"><select id="modelSelect"
+                            class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
+                            <option value="gemini-2.5-flash">gemini-2.5-flash (推奨)</option>
+                            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                        </select><i
+                            class="fa-solid fa-chevron-down absolute top-4 right-4 text-gray-400 pointer-events-none"></i>
+                    </div>
+                    <div id="modelInputContainer" class="relative mb-2 hidden"><input type="text" id="modelInput"
+                            placeholder="モデル名を手入力"
+                            class="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><i
+                            class="fa-solid fa-robot absolute top-3.5 right-3 text-gray-300"></i></div>
+                    <div class="flex gap-2"><button onclick="fetchModels()" id="fetchModelsBtn"
+                            class="flex-1 text-xs bg-blue-50 text-blue-700 font-bold px-3 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center"><i
+                                class="fa-solid fa-cloud-arrow-down mr-1"></i>モデル一覧を更新</button><button
+                            onclick="toggleModelInputMode()"
+                            class="text-xs bg-gray-100 text-gray-500 font-bold px-3 py-2.5 rounded-lg hover:bg-gray-200 transition"
+                            aria-label="手入力モード切替"><i class="fa-solid fa-pen mr-1"></i>手入力</button></div>
+                    <p id="modelFetchStatus" class="text-xs text-gray-400 mt-2 h-4"></p>
+                </div>
+                <div class="mb-8 pt-6 border-t border-gray-100"><label
+                        class="block text-sm font-bold mb-2 text-gray-700">保存された薬リスト</label>
+                    <p class="text-xs text-gray-400 mb-2">「記録」ボタンを押すと、新しい薬の名前が自動でここに保存されます。</p>
+                    <div class="flex gap-2"><button onclick="clearMedicationHistory()"
+                            class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2 rounded-lg hover:bg-red-100 transition"><i
+                                class="fa-solid fa-eraser mr-1"></i>薬リストをリセット</button></div>
+                </div>
+                <button onclick="saveSettings()"
+                    class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
-            <div class="p-4 rounded-xl text-sm text-gray-500 text-center"><p>© 2024 Gastro Log v3.6</p></div>
+            <div class="p-4 rounded-xl text-sm text-gray-500 text-center">
+                <p>© 2024 Gastro Log v3.6</p>
+            </div>
         </section>
     </main>
 
+    <div id="toastContainer" class="toast-container"></div>
+
     <nav class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 pb-safe">
         <div class="max-w-md mx-auto flex justify-around items-center h-16">
-            <button onclick="switchView('analyze')" class="nav-btn active flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-camera text-xl mb-1"></i><span class="text-xs font-bold">入力・解析</span></button>
-            <button onclick="switchView('history')" class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-list-ul text-xl mb-1"></i><span class="text-xs font-bold">記録・集計</span></button>
-            <button onclick="switchView('settings')" class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i class="fa-solid fa-gear text-xl mb-1"></i><span class="text-xs font-bold">設定</span></button>
+            <button onclick="switchView('analyze')"
+                class="nav-btn active flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i
+                    class="fa-solid fa-camera text-xl mb-1"></i><span class="text-xs font-bold">入力・解析</span></button>
+            <button onclick="switchView('history')"
+                class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i
+                    class="fa-solid fa-list-ul text-xl mb-1"></i><span class="text-xs font-bold">記録・集計</span></button>
+            <button onclick="switchView('settings')"
+                class="nav-btn flex-1 flex flex-col items-center justify-center text-gray-400 transition"><i
+                    class="fa-solid fa-gear text-xl mb-1"></i><span class="text-xs font-bold">設定</span></button>
         </div>
     </nav>
 
     <script>
+        // グローバル定数
+        const RISK_WORDS = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
+
+        // XSS対策：HTMLエスケープ関数
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // トースト通知
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+            toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         let currentBase64 = null; let currentIngredients = []; let isManualModelMode = false;
         let currentYear = new Date().getFullYear(); let currentMonth = new Date().getMonth(); let currentViewMode = 'list'; let selectedDate = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadSettings();
-            if(!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
+            if (!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
             checkAnalyzeable(); checkUrlParams(); loadMedicationHistory();
         });
 
@@ -194,7 +501,7 @@
         function updateNavStyles(activeView) {
             const icons = { analyze: 0, history: 1, settings: 2 }; const navBtns = document.querySelectorAll('.nav-btn');
             navBtns.forEach(btn => btn.classList.remove('text-blue-600', 'text-gray-400')); navBtns.forEach(btn => btn.classList.add('text-gray-400'));
-            if(navBtns[icons[activeView]]) { navBtns[icons[activeView]].classList.remove('text-gray-400'); navBtns[icons[activeView]].classList.add('text-blue-600'); }
+            if (navBtns[icons[activeView]]) { navBtns[icons[activeView]].classList.remove('text-gray-400'); navBtns[icons[activeView]].classList.add('text-blue-600'); }
         }
 
         function toggleHistoryView(mode) {
@@ -205,7 +512,7 @@
                 btnList.classList.remove('bg-blue-600', 'text-white', 'shadow-sm'); btnList.classList.add('text-gray-500', 'hover:bg-gray-50');
                 btnCal.classList.remove('text-gray-500', 'hover:bg-gray-50'); btnCal.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
                 calContainer.classList.remove('hidden'); renderCalendar(); renderHistory(selectedDate);
-                listTitle.textContent = selectedDate ? `${selectedDate.getMonth()+1}/${selectedDate.getDate()} のログ` : "ログ一覧";
+                listTitle.textContent = selectedDate ? `${selectedDate.getMonth() + 1}/${selectedDate.getDate()} のログ` : "ログ一覧";
             } else {
                 btnCal.classList.remove('bg-blue-600', 'text-white', 'shadow-sm'); btnCal.classList.add('text-gray-500', 'hover:bg-gray-50');
                 btnList.classList.remove('text-gray-500', 'hover:bg-gray-50'); btnList.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
@@ -216,7 +523,7 @@
             const grid = document.getElementById('calendarGrid'); const title = document.getElementById('calendarTitle');
             grid.innerHTML = ''; title.textContent = `${currentYear}年 ${currentMonth + 1}月`;
             const firstDay = new Date(currentYear, currentMonth, 1); const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const daysInMonth = lastDay.getDate(); const startDayOfWeek = firstDay.getDay(); 
+            const daysInMonth = lastDay.getDate(); const startDayOfWeek = firstDay.getDay();
             const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const today = new Date();
             for (let i = 0; i < startDayOfWeek; i++) { grid.appendChild(document.createElement('div')); }
             for (let d = 1; d <= daysInMonth; d++) {
@@ -227,9 +534,8 @@
                 const dayLogs = history.filter(item => { const logDate = new Date(item.id); return logDate.toDateString() === thisDate.toDateString(); });
                 if (dayLogs.length > 0) {
                     const dot = document.createElement('div'); dot.className = 'dot';
-                    const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
-                    const hasWarning = dayLogs.some(item => item.ingredients && item.ingredients.some(ing => riskWords.some(r => ing.includes(r))));
-                    const hasSafeFood = dayLogs.some(item => item.ingredients && item.ingredients.length > 0 && !item.ingredients.some(ing => riskWords.some(r => ing.includes(r))));
+                    const hasWarning = dayLogs.some(item => item.ingredients && item.ingredients.some(ing => RISK_WORDS.some(r => ing.includes(r))));
+                    const hasSafeFood = dayLogs.some(item => item.ingredients && item.ingredients.length > 0 && !item.ingredients.some(ing => RISK_WORDS.some(r => ing.includes(r))));
                     if (hasWarning) dot.classList.add('bg-red-500'); else if (hasSafeFood) dot.classList.add('bg-green-500'); else dot.classList.add('bg-blue-400');
                     dayDiv.appendChild(dot);
                 }
@@ -251,74 +557,73 @@
             if (history.length === 0) { listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200"><i class="fa-solid fa-utensils text-3xl mb-2 opacity-50"></i><p class="text-sm">記録はありません</p></div>`; return; }
 
             history.forEach(item => {
-                const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
                 const tagsHtml = item.ingredients && item.ingredients.length > 0 ? item.ingredients.map(t => {
                     let colorClass = 'bg-green-50 text-green-700 border-green-200';
-                    if (riskWords.some(word => t.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
-                    return `<span class="${colorClass} text-xs px-2 py-0.5 rounded border mr-1 mb-1 inline-block">${t}</span>`;
+                    if (RISK_WORDS.some(word => t.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
+                    return `<span class="${colorClass} text-xs px-2 py-0.5 rounded border mr-1 mb-1 inline-block">${escapeHtml(t)}</span>`;
                 }).join('') : (item.image || (item.memo && !item.life) ? '<span class="text-xs text-gray-400"><i class="fa-solid fa-check mr-1"></i>成分なし</span>' : '');
 
                 let lifeLogHtml = ''; const life = item.life || {};
-                if (life.sleepTime) { const qMap = { good: '良', normal: '普', bad: '悪' }; const qText = qMap[life.sleepQuality] ? `(${qMap[life.sleepQuality]})` : ''; lifeLogHtml += `<span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-bed mr-1"></i>${life.sleepTime}h ${qText}</span>`; }
-                if (life.steps) { lifeLogHtml += `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-shoe-prints mr-1"></i>${life.steps}歩</span>`; }
-                if (life.stress) { const s = parseInt(life.stress); let color='bg-green-50 text-green-700'; if(s>=4)color='bg-yellow-50 text-yellow-700'; if(s>=8)color='bg-red-50 text-red-700'; lifeLogHtml += `<span class="text-xs ${color} px-2 py-1 rounded mr-2 mb-1 inline-block font-bold"><i class="fa-solid fa-bolt mr-1"></i>Lv.${s}</span>`; }
-                // ★アイコン変更
-                if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pen mr-1"></i>${life.exercise}</span>`; }
-                if (life.medication) { lifeLogHtml += `<span class="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pills mr-1"></i>${life.medication}</span>`; }
-                
+                if (life.sleepTime) { const qMap = { good: '良', normal: '普', bad: '悪' }; const qText = qMap[life.sleepQuality] ? `(${qMap[life.sleepQuality]})` : ''; lifeLogHtml += `<span class="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-bed mr-1"></i>${escapeHtml(life.sleepTime)}h ${qText}</span>`; }
+                if (life.steps) { lifeLogHtml += `<span class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-shoe-prints mr-1"></i>${escapeHtml(life.steps)}歩</span>`; }
+                if (life.stress) { const s = parseInt(life.stress); let color = 'bg-green-50 text-green-700'; if (s >= 4) color = 'bg-yellow-50 text-yellow-700'; if (s >= 8) color = 'bg-red-50 text-red-700'; lifeLogHtml += `<span class="text-xs ${color} px-2 py-1 rounded mr-2 mb-1 inline-block font-bold"><i class="fa-solid fa-bolt mr-1"></i>Lv.${s}</span>`; }
+                if (life.exercise) { lifeLogHtml += `<span class="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pen mr-1"></i>${escapeHtml(life.exercise)}</span>`; }
+                if (life.medication) { lifeLogHtml += `<span class="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded mr-2 mb-1 inline-block"><i class="fa-solid fa-pills mr-1"></i>${escapeHtml(life.medication)}</span>`; }
+
                 const imageHtml = item.image ? `<img src="${item.image}" class="w-20 h-20 object-cover rounded-lg bg-gray-200 border border-gray-100">` : `<div class="w-20 h-20 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center text-gray-300"><i class="fa-solid fa-notes-medical text-2xl"></i></div>`;
-                const memoHtml = item.memo ? `<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded border border-gray-100"><i class="fa-regular fa-comment mr-1 text-gray-400"></i>${item.memo}</p>` : '';
-                const html = `<div class="bg-white rounded-xl shadow-sm p-4 relative"><button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button><div class="flex gap-4 items-start mb-2">${imageHtml}<div class="flex-1 min-w-0 pt-1"><p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${item.date}</p><div class="flex flex-wrap mb-2">${tagsHtml}</div><div class="flex flex-wrap gap-y-1">${lifeLogHtml}</div></div></div>${memoHtml}</div>`;
+                const memoHtml = item.memo ? `<p class="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded border border-gray-100"><i class="fa-regular fa-comment mr-1 text-gray-400"></i>${escapeHtml(item.memo)}</p>` : '';
+                const html = `<div class="bg-white rounded-xl shadow-sm p-4 relative"><button onclick="deleteLog(${item.id})" class="absolute top-3 right-3 text-gray-300 hover:text-red-500 p-1" aria-label="削除"><i class="fa-solid fa-trash-can"></i></button><div class="flex gap-4 items-start mb-2">${imageHtml}<div class="flex-1 min-w-0 pt-1"><p class="text-xs text-gray-400 mb-1.5 flex items-center"><i class="fa-regular fa-clock mr-1"></i>${escapeHtml(item.date)}</p><div class="flex flex-wrap mb-2">${tagsHtml}</div><div class="flex flex-wrap gap-y-1">${lifeLogHtml}</div></div></div>${memoHtml}</div>`;
                 listContainer.insertAdjacentHTML('beforeend', html);
             });
         }
 
         async function analyze() {
             const apiKey = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'; const textMemo = document.getElementById('textInput').value.trim();
-            if (!apiKey) { alert('APIキーが設定されていません'); switchView('settings'); return; }
+            if (!apiKey) { showToast('APIキーが設定されていません', 'warning'); switchView('settings'); return; }
             document.getElementById('loadingArea').classList.remove('hidden'); document.getElementById('actionButtons').classList.add('hidden'); document.getElementById('resultArea').classList.add('hidden');
             const systemPrompt = `あなたは消化器内科の専門知識を持つ管理栄養士です。提供された料理の画像やテキストから、使われている【すべての食材】を具体的に推測してリストアップしてください。各食材について、IBS（過敏性腸症候群）の観点から以下のタグを末尾に付与してください。- 高FODMAP食材の場合: "(高FODMAP)" - 脂質が多い食材の場合: "(高脂質)" - グルテンを含む場合: "(グルテン)" - 辛味成分など刺激が強い場合: "(刺激物)" - カフェインを含む場合: "(カフェイン)" - 問題ない食材: タグなし。回答は必ず JSON形式の配列 ["食材名 (タグ)", "食材名"] だけで出力してください。`;
             let requestParts = [{ text: systemPrompt }]; if (textMemo) requestParts.push({ text: `【補足テキスト情報】\n${textMemo}` }); if (currentBase64) requestParts.push({ inline_data: { mime_type: "image/jpeg", data: currentBase64.split(',')[1] } });
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); alert(`解析エラー:\n${error.message}`); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
+            try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: requestParts }] }) }); if (!response.ok) { throw new Error(`API Error: ${response.status}`); } const data = await response.json(); const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text; if (!rawText) throw new Error('応答なし'); const jsonStr = rawText.replace(/```json|```/g, '').trim(); try { currentIngredients = JSON.parse(jsonStr); } catch (e) { currentIngredients = []; } displayResults(currentIngredients); } catch (error) { console.error(error); showToast(`解析エラー: ${error.message}`, 'error'); document.getElementById('actionButtons').classList.remove('hidden'); } finally { document.getElementById('loadingArea').classList.add('hidden'); }
         }
 
         // 削除機能はそのまま
-        function displayResults(ingredients) { 
-            const container = document.getElementById('tagsContainer'); container.innerHTML = ''; 
-            if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; } 
-            else { 
-                const riskWords = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン'];
-                ingredients.forEach((tag, index) => { 
-                    const span = document.createElement('span'); 
+        function displayResults(ingredients) {
+            const container = document.getElementById('tagsContainer'); container.innerHTML = '';
+            if (!ingredients || ingredients.length === 0) { container.innerHTML = '<span class="text-gray-500 text-sm">特になし</span>'; }
+            else {
+                // グローバルの RISK_WORDS を使用
+                ingredients.forEach((tag, index) => {
+                    const span = document.createElement('span');
                     let colorClass = 'bg-green-50 text-green-700 border-green-200';
-                    if (riskWords.some(word => tag.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
-                    span.className = `${colorClass} text-sm px-3 py-1 rounded-full border tag-removable`; 
-                    span.textContent = tag; 
-                    span.onclick = function() { removeIngredient(index); };
-                    container.appendChild(span); 
-                }); 
-            } 
-            document.getElementById('resultArea').classList.remove('hidden'); 
+                    if (RISK_WORDS.some(word => tag.includes(word))) { colorClass = 'bg-red-100 text-red-700 border-red-200 font-bold'; }
+                    span.className = `${colorClass} text-sm px-3 py-1 rounded-full border tag-removable`;
+                    span.textContent = tag;
+                    span.onclick = function () { removeIngredient(index); };
+                    container.appendChild(span);
+                });
+            }
+            document.getElementById('resultArea').classList.remove('hidden');
         }
         function removeIngredient(index) { if (index > -1) { currentIngredients.splice(index, 1); displayResults(currentIngredients); } }
 
         function loadMedicationHistory() { const list = JSON.parse(localStorage.getItem('medication_history') || '[]'); const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = ''; list.forEach(item => { const option = document.createElement('option'); option.value = item; datalist.appendChild(option); }); }
-        function addToMedicationHistory(text) { if(!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]'); if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); } }
-        function clearMedicationHistory() { if(!confirm('削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); }
-        function saveSettings() { const key = document.getElementById('apiKeyInput').value.trim(); let model; if (isManualModelMode) model = document.getElementById('modelInput').value.trim(); else model = document.getElementById('modelSelect').value; if(!key || !model) { alert('未入力です'); return; } localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); alert('保存しました'); switchView('analyze'); }
-        function loadSettings() { const key = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model'); if(key) document.getElementById('apiKeyInput').value = key; if (model) { const select = document.getElementById('modelSelect'); const optionExists = Array.from(select.options).some(opt => opt.value === model); if (optionExists) select.value = model; else { toggleModelInputMode(true); document.getElementById('modelInput').value = model; } } else { document.getElementById('modelSelect').value = "gemini-2.5-flash"; } }
+        function addToMedicationHistory(text) { if (!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]'); if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); } }
+        function clearMedicationHistory() { if (!confirm('削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); showToast('薬リストをリセットしました', 'success'); }
+        function saveSettings() { const key = document.getElementById('apiKeyInput').value.trim(); let model; if (isManualModelMode) model = document.getElementById('modelInput').value.trim(); else model = document.getElementById('modelSelect').value; if (!key || !model) { showToast('未入力の項目があります', 'warning'); return; } localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); showToast('設定を保存しました', 'success'); switchView('analyze'); }
+        function loadSettings() { const key = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model'); if (key) document.getElementById('apiKeyInput').value = key; if (model) { const select = document.getElementById('modelSelect'); const optionExists = Array.from(select.options).some(opt => opt.value === model); if (optionExists) select.value = model; else { toggleModelInputMode(true); document.getElementById('modelInput').value = model; } } else { document.getElementById('modelSelect').value = "gemini-2.5-flash"; } }
         function toggleModelInputMode(forceManual = null) { const selectContainer = document.getElementById('modelSelectContainer'); const inputContainer = document.getElementById('modelInputContainer'); if (forceManual === null) isManualModelMode = !isManualModelMode; else isManualModelMode = forceManual; if (isManualModelMode) { selectContainer.classList.add('hidden'); inputContainer.classList.remove('hidden'); } else { selectContainer.classList.remove('hidden'); inputContainer.classList.add('hidden'); } }
-        async function fetchModels() { const apiKey = document.getElementById('apiKeyInput').value.trim(); const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn'); if (!apiKey) { alert('APIキーを入力してください'); return; } statusEl.textContent = '取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true; try { const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`; const res = await fetch(url); if(!res.ok) throw new Error(`Error: ${res.status}`); const data = await res.json(); const availableModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')).sort(); selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if(modelName.includes('gemini-3')||modelName.includes('pro-preview')) option.textContent+=' 🚀'; else if(modelName.includes('flash')) option.textContent+=' ⚡'; selectEl.appendChild(option); }); const best = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = best; if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `完了: ${availableModels.length}件`; statusEl.className = 'text-xs text-green-600 mt-2'; } catch (e) { console.error(e); statusEl.textContent = '失敗'; statusEl.className = 'text-xs text-red-500 mt-2'; alert('取得失敗'); } finally { btn.disabled = false; } }
+        async function fetchModels() { const apiKey = document.getElementById('apiKeyInput').value.trim(); const statusEl = document.getElementById('modelFetchStatus'); const selectEl = document.getElementById('modelSelect'); const btn = document.getElementById('fetchModelsBtn'); if (!apiKey) { showToast('APIキーを入力してください', 'warning'); return; } statusEl.textContent = '取得中(v1beta)...'; statusEl.className = 'text-xs text-blue-500 mt-2 animate-pulse'; btn.disabled = true; try { const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`; const res = await fetch(url); if (!res.ok) throw new Error(`Error: ${res.status}`); const data = await res.json(); const availableModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace('models/', '')).sort(); selectEl.innerHTML = ''; availableModels.forEach(modelName => { const option = document.createElement('option'); option.value = modelName; option.textContent = modelName; if (modelName.includes('gemini-3') || modelName.includes('pro-preview')) option.textContent += ' 🚀'; else if (modelName.includes('flash')) option.textContent += ' ⚡'; selectEl.appendChild(option); }); const best = availableModels.find(m => m.includes('2.5-flash')) || availableModels[0]; selectEl.value = best; if (isManualModelMode) toggleModelInputMode(false); statusEl.textContent = `完了: ${availableModels.length}件`; statusEl.className = 'text-xs text-green-600 mt-2'; showToast(`${availableModels.length}件のモデルを取得しました`, 'success'); } catch (e) { console.error(e); statusEl.textContent = '失敗'; statusEl.className = 'text-xs text-red-500 mt-2'; showToast('モデル一覧の取得に失敗しました', 'error'); } finally { btn.disabled = false; } }
         function handleImageSelect(event) { const file = event.target.files[0]; if (!file) return; resizeImage(file).then(resizedBase64 => { currentBase64 = resizedBase64; const imgEl = document.getElementById('previewImage'); imgEl.src = currentBase64; imgEl.classList.remove('hidden'); document.getElementById('uploadPlaceholder').classList.add('hidden'); document.getElementById('removeImageBtn').classList.remove('hidden'); document.getElementById('imageUploadLabel').classList.add('border-blue-500'); checkAnalyzeable(); document.getElementById('resultArea').classList.add('hidden'); }); event.target.value = ''; }
         function removeImage(event) { event.preventDefault(); currentBase64 = null; document.getElementById('previewImage').src = ''; document.getElementById('previewImage').classList.add('hidden'); document.getElementById('uploadPlaceholder').classList.remove('hidden'); document.getElementById('removeImageBtn').classList.add('hidden'); document.getElementById('imageUploadLabel').classList.remove('border-blue-500'); checkAnalyzeable(); }
         function checkAnalyzeable() { const text = document.getElementById('textInput').value.trim(); document.getElementById('analyzeBtn').disabled = !(currentBase64 || text.length > 0); }
         function resizeImage(file, maxWidth = 800) { return new Promise((resolve) => { const img = new Image(); img.src = URL.createObjectURL(file); img.onload = () => { const canvas = document.createElement('canvas'); let w = img.width, h = img.height; if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }); }
-        function saveLog(isAnalyzed) { if (!isAnalyzed) currentIngredients = []; const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim(); if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { alert('記録内容がありません'); return; } if (medication) addToMedicationHistory(medication); const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } }; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50); try { localStorage.setItem('food_history', JSON.stringify(history)); alert('記録しました'); resetAnalyzeView(); switchView('history'); } catch (e) { alert('容量上限です。古い履歴を削除してください。'); } }
+        function saveLog(isAnalyzed) { if (!isAnalyzed) currentIngredients = []; const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim(); if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { showToast('記録内容がありません', 'warning'); return; } if (medication) addToMedicationHistory(medication); const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } }; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50); try { localStorage.setItem('food_history', JSON.stringify(history)); showToast('記録しました', 'success'); resetAnalyzeView(); switchView('history'); } catch (e) { showToast('容量上限です。古い履歴を削除してください。', 'error'); } }
         function resetAnalyzeView() { currentBase64 = null; currentIngredients = []; document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = ''; document.getElementById('stressInput').value = 5; updateStressDisplay(5); removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden'); document.getElementById('autoFillMessage').classList.add('hidden'); }
-        function deleteLog(id) { if(!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); }
-        function clearAllData() { if(!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
-        function updateStats() { const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = ''; if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; } const counts = {}; let totalDetected = 0; history.forEach(item => { if(item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } }); if(totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; } const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500']; sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); }); }
+        function deleteLog(id) { if (!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); }
+        function clearAllData() { if (!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
+        function updateStats() { const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = ''; if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; } const counts = {}; let totalDetected = 0; history.forEach(item => { if (item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } }); if (totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; } const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500']; sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); }); }
     </script>
 </body>
+
 </html>
