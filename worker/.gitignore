@@ -1,0 +1,8 @@
+# Dependencies
+node_modules/
+
+# Local secrets (DO NOT COMMIT)
+.dev.vars
+
+# Wrangler
+.wrangler/

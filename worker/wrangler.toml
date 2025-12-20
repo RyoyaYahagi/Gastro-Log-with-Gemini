@@ -1,0 +1,11 @@
+name = "gastro-log-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+FRONTEND_URL = "null"
+
+# Secrets (set via `wrangler secret put`):
+# - SUPABASE_URL
+# - SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY

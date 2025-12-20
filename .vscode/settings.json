@@ -1,0 +1,16 @@
+{
+    "ruff.configuration": "",
+    "[python]": {
+    // 1. デフォルトのフォーマッターをRuffに指定
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    
+    // 2. 保存時にフォーマットを実行（インデントや改行など）
+    "editor.formatOnSave": true,
+    
+    // 3. 保存時にLintエラーの修正とimportの整理を実行
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  }
+}
