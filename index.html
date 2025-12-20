@@ -820,11 +820,7 @@
                 } catch (e) {
                     console.error('Sync error:', e);
                     this.setStatus('error');
-                    // 初回同期失敗は静かに処理（テーブル未作成の可能性）
-                    if (!this.hasShownSyncError) {
-                        console.log('同期に失敗しました。Supabaseテーブルが作成されているか確認してください。');
-                        this.hasShownSyncError = true;
-                    }
+                    showToast('同期に失敗しました', 'warning');
                 }
 
                 if (this.pendingSync) {

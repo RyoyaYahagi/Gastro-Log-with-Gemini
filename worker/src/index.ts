@@ -14,14 +14,16 @@ interface Env {
 
 // CORS ヘッダー
 function corsHeaders(origin: string, env: Env): HeadersInit {
-    const allowedOrigins = [
-        env.FRONTEND_URL,
-        'http://localhost:8787',
-        'http://localhost:3000',
-        'http://127.0.0.1:5500',  // Live Server
-        'null'  // file:// からのアクセス
-    ];
-    const allowOrigin = allowedOrigins.includes(origin) ? origin : env.FRONTEND_URL;
+    // ローカル開発時は localhost の全ポートを許可
+    const isLocalhost = origin.startsWith('http://localhost:') ||
+        origin.startsWith('http://127.0.0.1:') ||
+        origin === 'null';  // file:// からのアクセス
+
+    const isAllowedOrigin = isLocalhost ||
+        origin === env.FRONTEND_URL ||
+        origin === 'http://localhost:3000';
+
+    const allowOrigin = isAllowedOrigin ? origin : env.FRONTEND_URL;
 
     return {
         'Access-Control-Allow-Origin': allowOrigin,
