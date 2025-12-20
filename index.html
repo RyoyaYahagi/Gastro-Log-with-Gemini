@@ -214,8 +214,17 @@
     <header class="bg-white shadow-sm fixed top-0 left-0 w-full z-50 h-16 flex justify-between items-center px-4">
         <h1 class="text-xl font-bold text-blue-600 flex items-center"><i
                 class="fa-solid fa-notes-medical mr-2"></i>Gastro Log</h1>
-        <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"
-            aria-label="履歴を削除"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
+        <div class="flex items-center gap-3">
+            <div id="syncIndicator" class="hidden flex items-center gap-1 text-xs">
+                <i id="syncIcon" class="fa-solid fa-cloud text-gray-400"></i>
+                <span id="syncText" class="text-gray-400">-</span>
+            </div>
+            <div id="userAvatar"
+                class="hidden w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm cursor-pointer"
+                onclick="switchView('settings')"></div>
+            <button onclick="clearAllData()" class="text-xs text-gray-400 hover:text-red-600 flex items-center"
+                aria-label="履歴を削除"><i class="fa-solid fa-trash mr-1"></i> 履歴削除</button>
+        </div>
     </header>
 
     <main class="max-w-md mx-auto p-4 min-h-screen">
@@ -383,6 +392,54 @@
         <section id="view-settings" class="view-section">
             <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                 <h2 class="text-xl font-bold mb-6 flex items-center"><i class="fa-solid fa-sliders mr-2"></i>設定</h2>
+
+                <!-- クラウド同期セクション -->
+                <div class="mb-6 pb-6 border-b border-gray-100">
+                    <label class="block text-sm font-bold mb-3 text-gray-700"><i
+                            class="fa-solid fa-cloud mr-1"></i>クラウド同期</label>
+                    <div id="authSection">
+                        <div id="loggedOutView">
+                            <p class="text-xs text-gray-500 mb-3">Googleアカウントでログインすると、複数デバイス間でデータを同期できます。</p>
+                            <button onclick="authService.login()"
+                                class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                                    <path fill="#4285F4"
+                                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                                    <path fill="#34A853"
+                                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                                    <path fill="#FBBC05"
+                                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                                    <path fill="#EA4335"
+                                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                                </svg>
+                                Googleでログイン
+                            </button>
+                        </div>
+                        <div id="loggedInView" class="hidden">
+                            <div class="flex items-center justify-between bg-green-50 p-3 rounded-xl mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div id="userAvatarLarge"
+                                        class="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-green-700 font-bold">
+                                    </div>
+                                    <div>
+                                        <p id="userEmail" class="text-sm font-bold text-gray-700"></p>
+                                        <p class="text-xs text-green-600"><i
+                                                class="fa-solid fa-check-circle mr-1"></i>同期中</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="syncService.syncAll()"
+                                    class="flex-1 text-xs bg-blue-50 text-blue-700 font-bold px-3 py-2.5 rounded-lg hover:bg-blue-100 transition flex items-center justify-center"><i
+                                        class="fa-solid fa-arrows-rotate mr-1"></i>今すぐ同期</button>
+                                <button onclick="authService.logout()"
+                                    class="text-xs bg-red-50 text-red-600 font-bold px-3 py-2.5 rounded-lg hover:bg-red-100 transition"><i
+                                        class="fa-solid fa-right-from-bracket mr-1"></i>ログアウト</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mb-6"><label for="apiKeyInput" class="block text-sm font-bold mb-2 text-gray-700">Gemini API
                         Key <span class="text-red-500">*</span></label>
                     <div class="relative"><input type="password" id="apiKeyInput" placeholder="AIzaSy..."
@@ -421,7 +478,7 @@
                     class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-4 rounded-xl transition">設定を保存して戻る</button>
             </div>
             <div class="p-4 rounded-xl text-sm text-gray-500 text-center">
-                <p>© 2024 Gastro Log v3.6</p>
+                <p>© 2024 Gastro Log v4.0</p>
             </div>
         </section>
     </main>
@@ -443,8 +500,11 @@
     </nav>
 
     <script>
-        // グローバル定数
+        // ========================================
+        // グローバル定数・設定
+        // ========================================
         const RISK_WORDS = ['高FODMAP', '高脂質', 'グルテン', '刺激物', 'カフェイン', '乳糖'];
+        const API_BASE = 'https://gastro-log-api.YOUR_SUBDOMAIN.workers.dev'; // デプロイ後に更新
 
         // XSS対策：HTMLエスケープ関数
         function escapeHtml(text) {
@@ -465,11 +525,250 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        // ========================================
+        // AuthService: 認証管理
+        // ========================================
+        class AuthService {
+            constructor(apiBase) {
+                this.apiBase = apiBase;
+                this.user = null;
+                this.accessToken = localStorage.getItem('access_token');
+                this.refreshToken = localStorage.getItem('refresh_token');
+            }
+
+            async init() {
+                // URLからトークンを取得（OAuthコールバック後）
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('access_token')) {
+                    this.accessToken = params.get('access_token');
+                    this.refreshToken = params.get('refresh_token');
+                    localStorage.setItem('access_token', this.accessToken);
+                    localStorage.setItem('refresh_token', this.refreshToken);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
+                if (this.accessToken) {
+                    await this.fetchUser();
+                }
+                this.updateUI();
+            }
+
+            async fetchUser() {
+                try {
+                    const res = await fetch(`${this.apiBase}/api/auth/me`, {
+                        headers: { 'Authorization': `Bearer ${this.accessToken}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.user = data.user;
+                    } else if (res.status === 401) {
+                        await this.refresh();
+                    }
+                } catch (e) {
+                    console.error('Auth error:', e);
+                }
+            }
+
+            async refresh() {
+                if (!this.refreshToken) return this.logout();
+                try {
+                    const res = await fetch(`${this.apiBase}/api/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refresh_token: this.refreshToken })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.accessToken = data.access_token;
+                        this.refreshToken = data.refresh_token;
+                        this.user = data.user;
+                        localStorage.setItem('access_token', this.accessToken);
+                        localStorage.setItem('refresh_token', this.refreshToken);
+                    } else {
+                        this.logout();
+                    }
+                } catch (e) {
+                    console.error('Refresh error:', e);
+                }
+            }
+
+            login() {
+                window.location.href = `${this.apiBase}/api/auth/google`;
+            }
+
+            logout() {
+                this.user = null;
+                this.accessToken = null;
+                this.refreshToken = null;
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                this.updateUI();
+                showToast('ログアウトしました', 'info');
+            }
+
+            isLoggedIn() {
+                return !!this.user;
+            }
+
+            getToken() {
+                return this.accessToken;
+            }
+
+            updateUI() {
+                const loggedOut = document.getElementById('loggedOutView');
+                const loggedIn = document.getElementById('loggedInView');
+                const avatar = document.getElementById('userAvatar');
+                const avatarLarge = document.getElementById('userAvatarLarge');
+                const emailEl = document.getElementById('userEmail');
+                const syncIndicator = document.getElementById('syncIndicator');
+
+                if (this.isLoggedIn()) {
+                    loggedOut.classList.add('hidden');
+                    loggedIn.classList.remove('hidden');
+                    avatar.classList.remove('hidden');
+                    syncIndicator.classList.remove('hidden');
+                    const initial = (this.user.email || 'U')[0].toUpperCase();
+                    avatar.textContent = initial;
+                    avatarLarge.textContent = initial;
+                    emailEl.textContent = this.user.email || '';
+                } else {
+                    loggedOut.classList.remove('hidden');
+                    loggedIn.classList.add('hidden');
+                    avatar.classList.add('hidden');
+                    syncIndicator.classList.add('hidden');
+                }
+            }
+        }
+
+        // ========================================
+        // SyncService: バックグラウンド同期
+        // ========================================
+        class SyncService {
+            constructor(apiBase, authService) {
+                this.apiBase = apiBase;
+                this.auth = authService;
+                this.status = 'idle'; // idle, syncing, synced, error
+                this.pendingSync = false;
+            }
+
+            async syncAll() {
+                if (!this.auth.isLoggedIn()) return;
+                if (this.status === 'syncing') {
+                    this.pendingSync = true;
+                    return;
+                }
+
+                this.setStatus('syncing');
+                try {
+                    // 1. ローカルログをサーバーへアップロード
+                    const localLogs = JSON.parse(localStorage.getItem('food_history') || '[]');
+                    if (localLogs.length > 0) {
+                        await fetch(`${this.apiBase}/api/logs`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.auth.getToken()}`
+                            },
+                            body: JSON.stringify({ logs: localLogs })
+                        });
+                    }
+
+                    // 2. サーバーからログをダウンロード
+                    const res = await fetch(`${this.apiBase}/api/logs`, {
+                        headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        // サーバーのデータをローカルにマージ（サーバー優先）
+                        const serverLogs = data.logs || [];
+                        const merged = this.mergeLogs(localLogs, serverLogs);
+                        localStorage.setItem('food_history', JSON.stringify(merged));
+                    }
+
+                    // 3. 薬履歴の同期
+                    const localMeds = JSON.parse(localStorage.getItem('medication_history') || '[]');
+                    if (localMeds.length > 0) {
+                        await fetch(`${this.apiBase}/api/medications`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.auth.getToken()}`
+                            },
+                            body: JSON.stringify({ medications: localMeds })
+                        });
+                    }
+
+                    const medsRes = await fetch(`${this.apiBase}/api/medications`, {
+                        headers: { 'Authorization': `Bearer ${this.auth.getToken()}` }
+                    });
+                    if (medsRes.ok) {
+                        const medsData = await medsRes.json();
+                        localStorage.setItem('medication_history', JSON.stringify(medsData.medications || []));
+                        loadMedicationHistory();
+                    }
+
+                    this.setStatus('synced');
+                    showToast('同期完了', 'success');
+                } catch (e) {
+                    console.error('Sync error:', e);
+                    this.setStatus('error');
+                    showToast('同期エラー', 'error');
+                }
+
+                if (this.pendingSync) {
+                    this.pendingSync = false;
+                    setTimeout(() => this.syncAll(), 1000);
+                }
+            }
+
+            mergeLogs(local, server) {
+                const map = new Map();
+                // ローカルを先に追加
+                local.forEach(log => map.set(log.id, log));
+                // サーバーで上書き（サーバー優先）
+                server.forEach(log => map.set(log.id, log));
+                // id降順でソート
+                return Array.from(map.values()).sort((a, b) => b.id - a.id);
+            }
+
+            setStatus(status) {
+                this.status = status;
+                const icon = document.getElementById('syncIcon');
+                const text = document.getElementById('syncText');
+                const states = {
+                    idle: { icon: 'fa-cloud', color: 'text-gray-400', text: '-' },
+                    syncing: { icon: 'fa-rotate', color: 'text-blue-500 animate-spin', text: '同期中' },
+                    synced: { icon: 'fa-cloud-check', color: 'text-green-500', text: '同期済' },
+                    error: { icon: 'fa-cloud-exclamation', color: 'text-red-500', text: 'エラー' }
+                };
+                const s = states[status] || states.idle;
+                icon.className = `fa-solid ${s.icon} ${s.color}`;
+                text.textContent = s.text;
+                text.className = s.color;
+            }
+
+            // ログ保存後に呼び出し
+            queueSync() {
+                if (!this.auth.isLoggedIn()) return;
+                // 3秒後に同期（連続保存をバッチ化）
+                clearTimeout(this.syncTimer);
+                this.syncTimer = setTimeout(() => this.syncAll(), 3000);
+            }
+        }
+
+        // グローバルインスタンス
+        const authService = new AuthService(API_BASE);
+        const syncService = new SyncService(API_BASE, authService);
+
         let currentBase64 = null; let currentIngredients = []; let isManualModelMode = false;
         let currentYear = new Date().getFullYear(); let currentMonth = new Date().getMonth(); let currentViewMode = 'list'; let selectedDate = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             loadSettings();
+            await authService.init();
+            if (authService.isLoggedIn()) {
+                syncService.syncAll();
+            }
             if (!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
             checkAnalyzeable(); checkUrlParams(); loadMedicationHistory();
         });
@@ -618,9 +917,10 @@
         function removeImage(event) { event.preventDefault(); currentBase64 = null; document.getElementById('previewImage').src = ''; document.getElementById('previewImage').classList.add('hidden'); document.getElementById('uploadPlaceholder').classList.remove('hidden'); document.getElementById('removeImageBtn').classList.add('hidden'); document.getElementById('imageUploadLabel').classList.remove('border-blue-500'); checkAnalyzeable(); }
         function checkAnalyzeable() { const text = document.getElementById('textInput').value.trim(); document.getElementById('analyzeBtn').disabled = !(currentBase64 || text.length > 0); }
         function resizeImage(file, maxWidth = 800) { return new Promise((resolve) => { const img = new Image(); img.src = URL.createObjectURL(file); img.onload = () => { const canvas = document.createElement('canvas'); let w = img.width, h = img.height; if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', 0.7)); }; }); }
-        function saveLog(isAnalyzed) { if (!isAnalyzed) currentIngredients = []; const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim(); if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { showToast('記録内容がありません', 'warning'); return; } if (medication) addToMedicationHistory(medication); const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } }; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50); try { localStorage.setItem('food_history', JSON.stringify(history)); showToast('記録しました', 'success'); resetAnalyzeView(); switchView('history'); } catch (e) { showToast('容量上限です。古い履歴を削除してください。', 'error'); } }
+        function saveLog(isAnalyzed) { if (!isAnalyzed) currentIngredients = []; const sleepTime = document.getElementById('sleepTime').value; const sleepQuality = document.getElementById('sleepQuality').value; const medication = document.getElementById('medicationInput').value.trim(); const exercise = document.getElementById('exerciseInput').value.trim(); const steps = document.getElementById('stepsInput').value; const stress = document.getElementById('stressInput').value; const textMemo = document.getElementById('textInput').value.trim(); if (!currentBase64 && !textMemo && !sleepTime && !medication && !exercise && !steps) { showToast('記録内容がありません', 'warning'); return; } if (medication) addToMedicationHistory(medication); const newLog = { id: Date.now(), date: new Date().toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), image: currentBase64, memo: textMemo, ingredients: currentIngredients, life: { sleepTime, sleepQuality, medication, exercise, steps, stress } }; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history.unshift(newLog); history = history.slice(0, 50); try { localStorage.setItem('food_history', JSON.stringify(history)); showToast('記録しました', 'success'); syncService.queueSync(); resetAnalyzeView(); switchView('history'); } catch (e) { showToast('容量上限です。古い履歴を削除してください。', 'error'); } }
         function resetAnalyzeView() { currentBase64 = null; currentIngredients = []; document.getElementById('textInput').value = ''; document.getElementById('sleepTime').value = ''; document.getElementById('sleepQuality').value = ''; document.getElementById('medicationInput').value = ''; document.getElementById('exerciseInput').value = ''; document.getElementById('stepsInput').value = ''; document.getElementById('stressInput').value = 5; updateStressDisplay(5); removeImage(new Event('click')); document.getElementById('actionButtons').classList.remove('hidden'); document.getElementById('analyzeBtn').disabled = true; document.getElementById('resultArea').classList.add('hidden'); document.getElementById('autoFillMessage').classList.add('hidden'); }
-        function deleteLog(id) { if (!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); }
+        function deleteLog(id) { if (!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); syncService.queueSync(); deleteLogFromServer(id); }
+        async function deleteLogFromServer(id) { if (!authService.isLoggedIn()) return; try { await fetch(`${API_BASE}/api/logs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authService.getToken()}` } }); } catch (e) { console.error('Delete sync error:', e); } }
         function clearAllData() { if (!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
         function updateStats() { const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = ''; if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; } const counts = {}; let totalDetected = 0; history.forEach(item => { if (item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } }); if (totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; } const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500']; sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); }); }
     </script>
