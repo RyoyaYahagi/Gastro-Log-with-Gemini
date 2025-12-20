@@ -751,13 +751,22 @@
 
             async syncAll() {
                 // ゲストモードまたは未ログイン時は同期しない
-                if (!this.auth.isLoggedIn() || this.auth.isGuestMode()) return;
+                if (!this.auth.isLoggedIn()) {
+                    showToast('ログインが必要です', 'warning');
+                    return;
+                }
+                if (this.auth.isGuestMode()) {
+                    showToast('ゲストモードでは同期できません', 'info');
+                    return;
+                }
                 if (this.status === 'syncing') {
                     this.pendingSync = true;
+                    showToast('同期中です...', 'info');
                     return;
                 }
 
                 this.setStatus('syncing');
+                showToast('同期を開始...', 'info');
                 try {
                     // 1. ローカルログをサーバーへアップロード
                     const localLogs = JSON.parse(localStorage.getItem('food_history') || '[]');
