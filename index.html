@@ -902,7 +902,7 @@
                 syncService.syncAll();
             }
             if (!localStorage.getItem('gemini_api_key')) { switchView('settings'); } else { updateNavStyles('analyze'); }
-            checkAnalyzeable(); checkUrlParams(); loadMedicationHistory();
+            checkAnalyzeable(); checkUrlParams(); loadMedicationHistory(); loadSafeList();
         });
 
         function updateStressDisplay(val) { document.getElementById('stressValueDisplay').textContent = val; }
@@ -1041,6 +1041,50 @@
         function loadMedicationHistory() { const list = JSON.parse(localStorage.getItem('medication_history') || '[]'); const datalist = document.getElementById('medicationHistoryList'); datalist.innerHTML = ''; list.forEach(item => { const option = document.createElement('option'); option.value = item; datalist.appendChild(option); }); }
         function addToMedicationHistory(text) { if (!text) return; let list = JSON.parse(localStorage.getItem('medication_history') || '[]'); if (!list.includes(text)) { list.push(text); localStorage.setItem('medication_history', JSON.stringify(list)); loadMedicationHistory(); } }
         function clearMedicationHistory() { if (!confirm('削除しますか？')) return; localStorage.removeItem('medication_history'); loadMedicationHistory(); showToast('薬リストをリセットしました', 'success'); }
+
+        // Safe List 関数
+        function getSafeList() { return JSON.parse(localStorage.getItem('safe_list') || '[]'); }
+        function addToSafeList() {
+            const input = document.getElementById('safeListInput');
+            const text = input.value.trim();
+            if (!text) { showToast('成分名を入力してください', 'warning'); return; }
+            let list = getSafeList();
+            if (!list.includes(text)) {
+                list.push(text);
+                localStorage.setItem('safe_list', JSON.stringify(list));
+                loadSafeList();
+                updateStats();
+                showToast(`「${text}」をSafe Listに追加しました`, 'success');
+            } else {
+                showToast('既に登録されています', 'info');
+            }
+            input.value = '';
+        }
+        function removeFromSafeList(text) {
+            let list = getSafeList();
+            list = list.filter(item => item !== text);
+            localStorage.setItem('safe_list', JSON.stringify(list));
+            loadSafeList();
+            updateStats();
+            showToast(`「${text}」をSafe Listから削除しました`, 'info');
+        }
+        function loadSafeList() {
+            const list = getSafeList();
+            const container = document.getElementById('safeListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            if (list.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-400">まだ登録されていません</p>';
+                return;
+            }
+            list.forEach(item => {
+                const tag = document.createElement('span');
+                tag.className = 'inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-xs font-medium';
+                tag.innerHTML = `<i class="fa-solid fa-shield-halved"></i>${item}<button onclick="removeFromSafeList('${item}')" class="ml-1 hover:text-red-500"><i class="fa-solid fa-times"></i></button>`;
+                container.appendChild(tag);
+            });
+        }
+
         function saveSettings() { const key = document.getElementById('apiKeyInput').value.trim(); let model; if (isManualModelMode) model = document.getElementById('modelInput').value.trim(); else model = document.getElementById('modelSelect').value; if (!key || !model) { showToast('未入力の項目があります', 'warning'); return; } localStorage.setItem('gemini_api_key', key); localStorage.setItem('gemini_model', model); showToast('設定を保存しました', 'success'); switchView('analyze'); }
         function loadSettings() { const key = localStorage.getItem('gemini_api_key'); const model = localStorage.getItem('gemini_model'); if (key) document.getElementById('apiKeyInput').value = key; if (model) { const select = document.getElementById('modelSelect'); const optionExists = Array.from(select.options).some(opt => opt.value === model); if (optionExists) select.value = model; else { toggleModelInputMode(true); document.getElementById('modelInput').value = model; } } else { document.getElementById('modelSelect').value = "gemini-2.5-flash"; } }
         function toggleModelInputMode(forceManual = null) { const selectContainer = document.getElementById('modelSelectContainer'); const inputContainer = document.getElementById('modelInputContainer'); if (forceManual === null) isManualModelMode = !isManualModelMode; else isManualModelMode = forceManual; if (isManualModelMode) { selectContainer.classList.add('hidden'); inputContainer.classList.remove('hidden'); } else { selectContainer.classList.remove('hidden'); inputContainer.classList.add('hidden'); } }
@@ -1126,7 +1170,36 @@
         function deleteLog(id) { if (!confirm('削除しますか？')) return; let history = JSON.parse(localStorage.getItem('food_history') || '[]'); history = history.filter(item => item.id !== id); localStorage.setItem('food_history', JSON.stringify(history)); renderCalendar(); renderHistory(selectedDate); updateStats(); syncService.queueSync(); deleteLogFromServer(id); }
         async function deleteLogFromServer(id) { if (!authService.isLoggedIn()) return; try { await fetch(`${API_BASE}/api/logs/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${authService.getToken()}` } }); } catch (e) { console.error('Delete sync error:', e); } }
         function clearAllData() { if (!confirm('全削除しますか？')) return; localStorage.removeItem('food_history'); renderCalendar(); renderHistory(null); updateStats(); }
-        function updateStats() { const history = JSON.parse(localStorage.getItem('food_history') || '[]'); const statsContainer = document.getElementById('statsContainer'); statsContainer.innerHTML = ''; if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; } const counts = {}; let totalDetected = 0; history.forEach(item => { if (item.ingredients) { item.ingredients.forEach(ing => { counts[ing] = (counts[ing] || 0) + 1; totalDetected++; }); } }); if (totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; } const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5); const maxCount = sorted[0][1]; const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500']; sorted.forEach(([name, count], index) => { const percentage = (count / maxCount) * 100; const barColor = colors[index % colors.length]; const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`; statsContainer.insertAdjacentHTML('beforeend', html); }); }
+        function updateStats() {
+            const history = JSON.parse(localStorage.getItem('food_history') || '[]');
+            const safeList = getSafeList();
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = '';
+            if (history.length === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">データなし</p>'; return; }
+            const counts = {};
+            let totalDetected = 0;
+            history.forEach(item => {
+                if (item.ingredients) {
+                    item.ingredients.forEach(ing => {
+                        // Safe List に含まれる成分は除外
+                        if (!safeList.includes(ing)) {
+                            counts[ing] = (counts[ing] || 0) + 1;
+                            totalDetected++;
+                        }
+                    });
+                }
+            });
+            if (totalDetected === 0) { statsContainer.innerHTML = '<p class="text-sm text-gray-400 text-center py-4">注意成分なし</p>'; return; }
+            const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            const maxCount = sorted[0][1];
+            const colors = ['bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-yellow-500', 'bg-lime-500'];
+            sorted.forEach(([name, count], index) => {
+                const percentage = (count / maxCount) * 100;
+                const barColor = colors[index % colors.length];
+                const html = `<div class="flex items-center justify-between text-sm mb-2"><span class="w-32 truncate font-bold text-gray-700" title="${name}">${name}</span><div class="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden mx-3 relative"><div class="h-full ${barColor} rounded-full relative" style="width: ${percentage}%"></div></div><span class="text-gray-500 font-mono text-xs">${count}回</span></div>`;
+                statsContainer.insertAdjacentHTML('beforeend', html);
+            });
+        }
     </script>
 </body>
 

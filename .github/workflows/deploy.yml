@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev
   workflow_dispatch:
 
 permissions:
@@ -26,10 +27,13 @@ jobs:
           projectName: gastro-log
           directory: .
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref_name }}
 
   deploy-worker:
     name: Deploy Cloudflare Worker
     runs-on: ubuntu-latest
+    # Workers は main ブランチのみデプロイ
+    if: github.ref == 'refs/heads/main'
     defaults:
       run:
         working-directory: worker
