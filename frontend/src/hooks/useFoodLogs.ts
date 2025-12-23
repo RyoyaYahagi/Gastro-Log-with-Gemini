@@ -3,20 +3,46 @@ import { type FoodLog } from '../lib/api'
 
 const STORAGE_KEY = 'food_history'
 
+// localStorage 用に画像を除外したログを作成
+const stripImageForStorage = (log: FoodLog): FoodLog => {
+    const { image, ...rest } = log
+    return rest
+}
+
 export function useFoodLogs() {
     const [logs, setLogs] = useState<FoodLog[]>([])
 
-    // 初期ロード
+    // 初期ロードとマイグレーション
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
             try {
-                setLogs(JSON.parse(saved))
+                const parsed = JSON.parse(saved)
+                setLogs(parsed)
+
+                // 画像データが含まれていたら削除して再保存（マイグレーション）
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const hasImage = parsed.some((log: any) => log.image && log.image.length > 100)
+                if (hasImage) {
+                    console.log('Migrating data: removing images from storage')
+                    const stripped = parsed.map(stripImageForStorage)
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+                }
             } catch {
                 setLogs([])
             }
         }
     }, [])
+
+    // localStorage に保存（画像を除外）
+    const saveToStorage = (logsToSave: FoodLog[]) => {
+        try {
+            const stripped = logsToSave.map(stripImageForStorage)
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e)
+        }
+    }
 
     // ログ追加
     const addLog = (log: Omit<FoodLog, 'id' | 'createdAt'>) => {
@@ -27,7 +53,7 @@ export function useFoodLogs() {
         }
         const updated = [newLog, ...logs]
         setLogs(updated)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+        saveToStorage(updated)
         return newLog
     }
 
@@ -35,7 +61,7 @@ export function useFoodLogs() {
     const deleteLog = (id: string) => {
         const updated = logs.filter((log) => log.id !== id)
         setLogs(updated)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+        saveToStorage(updated)
     }
 
     // 日付でフィルター
@@ -50,3 +76,4 @@ export function useFoodLogs() {
         getLogsByDate,
     }
 }
+
