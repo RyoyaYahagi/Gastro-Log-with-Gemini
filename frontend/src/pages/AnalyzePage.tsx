@@ -2,11 +2,17 @@ import { useState, useRef } from 'react'
 import { useFoodLogs } from '../hooks/useFoodLogs'
 import { analyzeFood } from '../lib/gemini'
 
+type ResultMessage = {
+    type: 'success' | 'warning' | 'error'
+    text: string
+} | null
+
 export function AnalyzePage() {
     const [image, setImage] = useState<string | null>(null)
     const [memo, setMemo] = useState('')
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [detectedIngredients, setDetectedIngredients] = useState<string[]>([])
+    const [resultMessage, setResultMessage] = useState<ResultMessage>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { addLog } = useFoodLogs()
 
@@ -33,7 +39,7 @@ export function AnalyzePage() {
             ingredients: [],
         })
         resetForm()
-        alert('記録しました')
+        setResultMessage({ type: 'success', text: '記録しました' })
     }
 
     const handleAnalyze = async () => {
@@ -41,17 +47,18 @@ export function AnalyzePage() {
         const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'
 
         if (!apiKey) {
-            alert('Gemini API Key を設定してください')
+            setResultMessage({ type: 'error', text: 'Gemini API Key を設定してください' })
             return
         }
 
         if (!image && !memo) {
-            alert('画像またはメモを入力してください')
+            setResultMessage({ type: 'error', text: '画像またはメモを入力してください' })
             return
         }
 
         setIsAnalyzing(true)
         setDetectedIngredients([])
+        setResultMessage(null)
 
         try {
             const ingredients = await analyzeFood(image, memo, apiKey, model)
@@ -66,14 +73,19 @@ export function AnalyzePage() {
             })
 
             if (ingredients.length > 0) {
-                alert(`注意成分を検出: ${ingredients.join(', ')}`)
+                setResultMessage({ type: 'warning', text: `注意成分を検出しました` })
             } else {
-                alert('注意成分は検出されませんでした')
+                setResultMessage({ type: 'success', text: '注意成分は検出されませんでした。記録しました。' })
             }
 
-            resetForm()
+            // 成功時はフォームをリセット（結果メッセージと検出成分は残す）
+            setImage(null)
+            setMemo('')
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
         } catch (error) {
-            alert(`解析エラー: ${error instanceof Error ? error.message : '不明なエラー'}`)
+            setResultMessage({ type: 'error', text: `解析エラー: ${error instanceof Error ? error.message : '不明なエラー'}` })
         } finally {
             setIsAnalyzing(false)
         }
@@ -83,6 +95,7 @@ export function AnalyzePage() {
         setImage(null)
         setMemo('')
         setDetectedIngredients([])
+        setResultMessage(null)
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
@@ -133,20 +146,6 @@ export function AnalyzePage() {
                 />
             </div>
 
-            {/* 検出された成分 */}
-            {detectedIngredients.length > 0 && (
-                <div className="bg-red-50 rounded-2xl p-4">
-                    <h3 className="text-sm font-bold text-red-700 mb-2">⚠️ 検出された注意成分</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {detectedIngredients.map((ing, i) => (
-                            <span key={i} className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                                {ing}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* 解析ボタン */}
             <div className="flex gap-3">
                 <button
@@ -171,6 +170,39 @@ export function AnalyzePage() {
                     )}
                 </button>
             </div>
+
+            {/* 結果メッセージ */}
+            {resultMessage && (
+                <div className={`rounded-2xl p-4 ${resultMessage.type === 'success' ? 'bg-green-50 border border-green-200' :
+                        resultMessage.type === 'warning' ? 'bg-amber-50 border border-amber-200' :
+                            'bg-red-50 border border-red-200'
+                    }`}>
+                    <p className={`text-sm font-medium ${resultMessage.type === 'success' ? 'text-green-700' :
+                            resultMessage.type === 'warning' ? 'text-amber-700' :
+                                'text-red-700'
+                        }`}>
+                        {resultMessage.type === 'success' && '✅ '}
+                        {resultMessage.type === 'warning' && '⚠️ '}
+                        {resultMessage.type === 'error' && '❌ '}
+                        {resultMessage.text}
+                    </p>
+                </div>
+            )}
+
+            {/* 検出された成分 */}
+            {detectedIngredients.length > 0 && (
+                <div className="bg-red-50 rounded-2xl p-4 border border-red-200">
+                    <h3 className="text-sm font-bold text-red-700 mb-2">⚠️ 検出された注意成分</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {detectedIngredients.map((ing, i) => (
+                            <span key={i} className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                                {ing}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
+
