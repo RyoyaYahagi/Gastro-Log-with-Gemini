@@ -5,11 +5,13 @@ export function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState<string | null>(null)
     const { getLogsByDate, deleteLog } = useFoodLogs()
     const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    const firstDayOfMonth = new Date(year, month, 1).getDay()
+    // 月をstateで管理
+    const [currentYear, setCurrentYear] = useState(today.getFullYear())
+    const [currentMonth, setCurrentMonth] = useState(today.getMonth())
+
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay()
 
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
     const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i)
@@ -24,13 +26,72 @@ export function CalendarPage() {
         }
     }
 
+    // 月ナビゲーション
+    const goToPrevMonth = () => {
+        if (currentMonth === 0) {
+            setCurrentYear(currentYear - 1)
+            setCurrentMonth(11)
+        } else {
+            setCurrentMonth(currentMonth - 1)
+        }
+        setSelectedDate(null)
+    }
+
+    const goToNextMonth = () => {
+        if (currentMonth === 11) {
+            setCurrentYear(currentYear + 1)
+            setCurrentMonth(0)
+        } else {
+            setCurrentMonth(currentMonth + 1)
+        }
+        setSelectedDate(null)
+    }
+
+    const goToToday = () => {
+        setCurrentYear(today.getFullYear())
+        setCurrentMonth(today.getMonth())
+        setSelectedDate(null)
+    }
+
     return (
         <div className="space-y-6">
             {/* カレンダーヘッダー */}
             <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-                    {year}年 {monthNames[month]}
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        onClick={goToPrevMonth}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        aria-label="前月"
+                    >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold text-gray-800">
+                            {currentYear}年 {monthNames[currentMonth]}
+                        </h2>
+                        {(currentYear !== today.getFullYear() || currentMonth !== today.getMonth()) && (
+                            <button
+                                onClick={goToToday}
+                                className="text-xs text-blue-500 hover:text-blue-700"
+                            >
+                                今月に戻る
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={goToNextMonth}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        aria-label="次月"
+                    >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
 
                 {/* 曜日ヘッダー */}
                 <div className="grid grid-cols-7 gap-1 mb-2">
@@ -51,8 +112,8 @@ export function CalendarPage() {
                         <div key={`empty-${i}`} className="aspect-square" />
                     ))}
                     {days.map((day) => {
-                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                        const isToday = day === today.getDate()
+                        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                        const isToday = day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear()
                         const isSelected = selectedDate === dateStr
                         const hasLogs = getLogsByDate(dateStr).length > 0
 

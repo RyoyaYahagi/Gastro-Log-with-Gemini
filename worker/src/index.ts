@@ -195,14 +195,22 @@ export default {
             // ヘルスチェック
             // ========================================
             if (path === '/api/health') {
-                return jsonResponse({ status: 'ok', timestamp: new Date().toISOString() }, 200, origin, env);
+                // DB接続テスト
+                try {
+                    await db.select().from(foodLogs).limit(1);
+                    return jsonResponse({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() }, 200, origin, env);
+                } catch (dbError) {
+                    const dbMessage = dbError instanceof Error ? dbError.message : 'Unknown DB error';
+                    return jsonResponse({ status: 'ok', db: 'error', dbError: dbMessage, timestamp: new Date().toISOString() }, 200, origin, env);
+                }
             }
 
             // 404
             return jsonResponse({ error: 'Not found' }, 404, origin, env);
         } catch (error) {
             console.error('API Error:', error);
-            return jsonResponse({ error: 'Internal server error' }, 500, origin, env);
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            return jsonResponse({ error: 'Internal server error', details: message }, 500, origin, env);
         }
     },
 };
