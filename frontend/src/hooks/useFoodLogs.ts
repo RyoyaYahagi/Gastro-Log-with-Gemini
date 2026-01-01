@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import { type FoodLog } from '../lib/api'
+import { useState, useEffect, useRef } from 'react'
+import { type FoodLog, api } from '../lib/api'
+import { useAuth } from './useAuth'
 
 const STORAGE_KEY = 'food_history'
 
@@ -11,36 +12,120 @@ const stripImageForStorage = (log: FoodLog): FoodLog => {
 
 export function useFoodLogs() {
     const [logs, setLogs] = useState<FoodLog[]>([])
+    const { user, getToken } = useAuth()
+    const hasSyncedRef = useRef(false)
+    const lastUserIdRef = useRef<string | null>(null)
 
-    // 初期ロードとマイグレーション
+    // 初期ロードと同期
     useEffect(() => {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved)
-                setLogs(parsed)
+        const userId = user?.id || null
 
-                // 画像データが含まれていたら削除して再保存（マイグレーション）
+        // 同じユーザーで既に同期済みの場合はスキップ
+        if (hasSyncedRef.current && lastUserIdRef.current === userId) {
+            return
+        }
+
+        // ユーザーが変わった場合はリセット
+        if (lastUserIdRef.current !== userId) {
+            hasSyncedRef.current = false
+            lastUserIdRef.current = userId
+        }
+
+        const syncLogs = async () => {
+            // ローカルデータを常に取得しておく
+            const localSaved = localStorage.getItem(STORAGE_KEY)
+            let localLogs: FoodLog[] = []
+            if (localSaved) {
+                try {
+                    localLogs = JSON.parse(localSaved)
+                } catch {
+                    localLogs = []
+                }
+            }
+
+            if (user) {
+                try {
+                    const token = await getToken()
+                    if (token) {
+                        // 1. クラウドからデータを取得
+                        const cloudLogs = await api.getLogs(token)
+
+                        // 2. ローカルにあってクラウドにないデータを探す（IDで比較）
+                        // ※ IDだけでなく、オフラインで編集された可能性も考慮すべきだが、
+                        //    今回は「IDが存在しないもの＝新規作成されたもの」として同期する
+                        const cloudIds = new Set(cloudLogs.map(l => l.id))
+                        const unsyncedLogs = localLogs.filter(l => !cloudIds.has(l.id))
+
+                        if (unsyncedLogs.length > 0) {
+                            console.log(`Syncing ${unsyncedLogs.length} logs to cloud...`)
+                            const logsToSync = unsyncedLogs.map(stripImageForStorage)
+                            await api.saveLogs(token, logsToSync)
+
+                            // 同期後に再度取得して最新状態にする
+                            const syncedLogs = await api.getLogs(token)
+                            setLogs(syncedLogs)
+                        } else {
+                            setLogs(cloudLogs)
+                        }
+
+                        // 同期成功
+                        hasSyncedRef.current = true
+                    }
+                } catch (e) {
+                    console.error('Failed to sync logs:', e)
+                    // エラー時はローカルデータを表示（オフライン対応）
+                    setLogs(localLogs)
+                    // エラーでも同期済みとして扱う（無限リトライを防ぐ）
+                    hasSyncedRef.current = true
+                }
+            } else {
+                // 未ログイン時はローカルデータを表示
+                setLogs(localLogs)
+                hasSyncedRef.current = true
+
+                // ローカルデータのマイグレーション（画像削除）
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const hasImage = parsed.some((log: any) => log.image && log.image.length > 100)
+                const hasImage = localLogs.some((log: any) => log.image && log.image.length > 100)
                 if (hasImage) {
                     console.log('Migrating data: removing images from storage')
-                    const stripped = parsed.map(stripImageForStorage)
+                    const stripped = localLogs.map(stripImageForStorage)
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
                 }
-            } catch {
-                setLogs([])
             }
         }
-    }, [])
+        syncLogs()
+    }, [user?.id, getToken])
 
-    // localStorage に保存（画像を除外）
-    const saveToStorage = (logsToSave: FoodLog[]) => {
-        try {
-            const stripped = logsToSave.map(stripImageForStorage)
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
-        } catch (e) {
-            console.error('Failed to save to localStorage:', e)
+    // 保存処理（ログイン状態により分岐）
+    const saveLogsData = async (newLogs: FoodLog[]) => {
+        setLogs(newLogs)
+
+        if (user) {
+            try {
+                const token = await getToken()
+                if (token) {
+                    // 画像は除外せずに送るか？現在のAPI実装を見ると、そのまま送っている。
+                    // ただし、画像がBase64で巨大な場合、API制限に引っかかる可能性がある。
+                    // フロントエンドのstripImageForStorageはローカルストレージ容量対策だった。
+                    // DBスキーマを見ると image カラムは text なので入るかもしれないが、
+                    // Neon等の容量制限もあるので、画像は一旦送らない（またはクラウドストレージが必要）
+                    // 既存の stripImageForStorage を適用して送るのが安全。
+
+                    // TODO: 画像アップロード機能の実装（現在は画像を除外して保存）
+                    const logsToSave = newLogs.map(stripImageForStorage)
+                    await api.saveLogs(token, logsToSave)
+                }
+            } catch (e) {
+                console.error('Failed to save to cloud:', e)
+            }
+        } else {
+            // ローカル保存
+            try {
+                const stripped = newLogs.map(stripImageForStorage)
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+            } catch (e) {
+                console.error('Failed to save to localStorage:', e)
+            }
         }
     }
 
@@ -52,16 +137,34 @@ export function useFoodLogs() {
             createdAt: new Date().toISOString(),
         }
         const updated = [newLog, ...logs]
-        setLogs(updated)
-        saveToStorage(updated)
+        saveLogsData(updated)
         return newLog
     }
 
     // ログ削除
-    const deleteLog = (id: string) => {
+    const deleteLog = async (id: string) => {
         const updated = logs.filter((log) => log.id !== id)
-        setLogs(updated)
-        saveToStorage(updated)
+        setLogs(updated) // UIを先に更新（Optimistic UI）
+
+        if (user) {
+            try {
+                const token = await getToken()
+                if (token) {
+                    await api.deleteLog(token, id)
+                }
+            } catch (e) {
+                console.error('Failed to delete from cloud:', e)
+                // ロールバック等の処理が必要だが今回は省略
+            }
+        } else {
+            // ローカル保存
+            try {
+                const stripped = updated.map(stripImageForStorage)
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+            } catch (e) {
+                console.error('Failed to save to localStorage:', e)
+            }
+        }
     }
 
     // 日付でフィルター

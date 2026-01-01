@@ -1,20 +1,13 @@
 import { useState, useRef } from 'react'
 import { useFoodLogs } from '../hooks/useFoodLogs'
-import { analyzeFood } from '../lib/gemini'
-
-type ResultMessage = {
-    type: 'success' | 'warning' | 'error'
-    text: string
-} | null
+import { useAnalysis } from '../hooks/useAnalysis'
 
 export function AnalyzePage() {
     const [image, setImage] = useState<string | null>(null)
     const [memo, setMemo] = useState('')
-    const [isAnalyzing, setIsAnalyzing] = useState(false)
-    const [detectedIngredients, setDetectedIngredients] = useState<string[]>([])
-    const [resultMessage, setResultMessage] = useState<ResultMessage>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { addLog } = useFoodLogs()
+    const { isAnalyzing, detectedIngredients, resultMessage, startAnalysis, resetResult } = useAnalysis()
 
     const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -39,63 +32,36 @@ export function AnalyzePage() {
             ingredients: [],
         })
         resetForm()
-        setResultMessage({ type: 'success', text: '記録しました' })
+        resetResult() // 以前の解析結果もクリア
     }
 
     const handleAnalyze = async () => {
-        const apiKey = localStorage.getItem('gemini_api_key')
-        const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'
+        const imageToAnalyze = image
+        const memoToAnalyze = memo
 
-        if (!apiKey) {
-            setResultMessage({ type: 'error', text: 'Gemini API Key を設定してください' })
-            return
-        }
+        const result = await startAnalysis(imageToAnalyze, memoToAnalyze)
 
-        if (!image && !memo) {
-            setResultMessage({ type: 'error', text: '画像またはメモを入力してください' })
-            return
-        }
-
-        setIsAnalyzing(true)
-        setDetectedIngredients([])
-        setResultMessage(null)
-
-        try {
-            const ingredients = await analyzeFood(image, memo, apiKey, model)
-            setDetectedIngredients(ingredients)
-
-            // ログを保存
+        if (result.success) {
+            // 解析成功時にログを保存
             addLog({
                 date: today,
-                image: image || undefined,
-                memo: memo || undefined,
-                ingredients,
+                image: imageToAnalyze || undefined,
+                memo: memoToAnalyze || undefined,
+                ingredients: result.ingredients,
             })
 
-            if (ingredients.length > 0) {
-                setResultMessage({ type: 'warning', text: `注意成分を検出しました` })
-            } else {
-                setResultMessage({ type: 'success', text: '注意成分は検出されませんでした。記録しました。' })
-            }
-
-            // 成功時はフォームをリセット（結果メッセージと検出成分は残す）
+            // フォームをクリア
             setImage(null)
             setMemo('')
             if (fileInputRef.current) {
                 fileInputRef.current.value = ''
             }
-        } catch (error) {
-            setResultMessage({ type: 'error', text: `解析エラー: ${error instanceof Error ? error.message : '不明なエラー'}` })
-        } finally {
-            setIsAnalyzing(false)
         }
     }
 
     const resetForm = () => {
         setImage(null)
         setMemo('')
-        setDetectedIngredients([])
-        setResultMessage(null)
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
@@ -174,12 +140,12 @@ export function AnalyzePage() {
             {/* 結果メッセージ */}
             {resultMessage && (
                 <div className={`rounded-2xl p-4 ${resultMessage.type === 'success' ? 'bg-green-50 border border-green-200' :
-                        resultMessage.type === 'warning' ? 'bg-amber-50 border border-amber-200' :
-                            'bg-red-50 border border-red-200'
+                    resultMessage.type === 'warning' ? 'bg-amber-50 border border-amber-200' :
+                        'bg-red-50 border border-red-200'
                     }`}>
                     <p className={`text-sm font-medium ${resultMessage.type === 'success' ? 'text-green-700' :
-                            resultMessage.type === 'warning' ? 'text-amber-700' :
-                                'text-red-700'
+                        resultMessage.type === 'warning' ? 'text-amber-700' :
+                            'text-red-700'
                         }`}>
                         {resultMessage.type === 'success' && '✅ '}
                         {resultMessage.type === 'warning' && '⚠️ '}

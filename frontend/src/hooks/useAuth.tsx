@@ -9,11 +9,12 @@ interface AuthContextType {
     isLoading: boolean
     signInWithGoogle: () => void
     signOut: () => Promise<void>
+    getToken: () => Promise<string | null>
 }
 
 export function useAuth(): AuthContextType {
     const { user, isLoaded } = useUser()
-    const { openSignIn, signOut } = useClerk()
+    const { openSignIn, signOut, session } = useClerk()
 
     const signInWithGoogle = () => {
         openSignIn()
@@ -34,5 +35,8 @@ export function useAuth(): AuthContextType {
         isLoading: !isLoaded,
         signInWithGoogle,
         signOut: handleSignOut,
+        getToken: async () => {
+            return session ? await session.getToken() : null
+        }
     }
 }

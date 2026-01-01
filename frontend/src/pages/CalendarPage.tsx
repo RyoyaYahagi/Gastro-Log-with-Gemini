@@ -61,10 +61,10 @@ export function CalendarPage() {
                                 key={day}
                                 onClick={() => setSelectedDate(dateStr)}
                                 className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-medium transition-all relative ${isSelected
-                                        ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30'
-                                        : isToday
-                                            ? 'bg-blue-100 text-blue-600'
-                                            : 'hover:bg-gray-100 text-gray-700'
+                                    ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30'
+                                    : isToday
+                                        ? 'bg-blue-100 text-blue-600'
+                                        : 'hover:bg-gray-100 text-gray-700'
                                     }`}
                             >
                                 {day}
@@ -88,6 +88,11 @@ export function CalendarPage() {
                         <div className="space-y-4">
                             {selectedLogs.map((log) => (
                                 <div key={log.id} className="border border-gray-100 rounded-xl p-4">
+                                    {log.createdAt && (
+                                        <p className="text-xs text-gray-400 mb-2">
+                                            🕐 {new Date(log.createdAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    )}
                                     {log.image && (
                                         <img
                                             src={log.image}
