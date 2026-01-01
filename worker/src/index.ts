@@ -88,7 +88,20 @@ export default {
                     return jsonResponse({ error: 'Unauthorized' }, 401, origin, env);
                 }
 
-                const logs = await db.select().from(foodLogs).where(eq(foodLogs.userId, userId));
+                const dbLogs = await db.select().from(foodLogs).where(eq(foodLogs.userId, userId));
+
+                // フロントエンドの形式に変換（clientId を id として返す）
+                const logs = dbLogs.map(log => ({
+                    id: log.clientId,
+                    date: log.date,
+                    image: log.image,
+                    memo: log.memo,
+                    ingredients: log.ingredients,
+                    life: log.life,
+                    createdAt: log.createdAt?.toISOString(),
+                    updatedAt: log.updatedAt?.toISOString(),
+                }));
+
                 return jsonResponse({ logs }, 200, origin, env);
             }
 
