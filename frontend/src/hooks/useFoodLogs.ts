@@ -58,8 +58,8 @@ export function useFoodLogs() {
 
                         if (unsyncedLogs.length > 0) {
                             console.log(`Syncing ${unsyncedLogs.length} logs to cloud...`)
-                            const logsToSync = unsyncedLogs.map(stripImageForStorage)
-                            await api.saveLogs(token, logsToSync)
+                            // 画像も含めてアップロード
+                            await api.saveLogs(token, unsyncedLogs)
 
                             // 同期後に再度取得して最新状態にする
                             const syncedLogs = await api.getLogs(token)
@@ -104,16 +104,9 @@ export function useFoodLogs() {
             try {
                 const token = await getToken()
                 if (token) {
-                    // 画像は除外せずに送るか？現在のAPI実装を見ると、そのまま送っている。
-                    // ただし、画像がBase64で巨大な場合、API制限に引っかかる可能性がある。
-                    // フロントエンドのstripImageForStorageはローカルストレージ容量対策だった。
-                    // DBスキーマを見ると image カラムは text なので入るかもしれないが、
-                    // Neon等の容量制限もあるので、画像は一旦送らない（またはクラウドストレージが必要）
-                    // 既存の stripImageForStorage を適用して送るのが安全。
-
-                    // TODO: 画像アップロード機能の実装（現在は画像を除外して保存）
-                    const logsToSave = newLogs.map(stripImageForStorage)
-                    await api.saveLogs(token, logsToSave)
+                    // 画像も含めてクラウドに保存
+                    // 注意: Base64画像は大きいため、将来的にはR2等の専用ストレージが望ましい
+                    await api.saveLogs(token, newLogs)
                 }
             } catch (e) {
                 console.error('Failed to save to cloud:', e)
