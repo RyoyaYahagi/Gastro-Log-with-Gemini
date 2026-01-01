@@ -13,7 +13,13 @@ function corsHeaders(origin: string, env: Env): HeadersInit {
     const isLocalhost = origin?.startsWith('http://localhost:') ||
         origin?.startsWith('http://127.0.0.1:') ||
         origin === 'null';
-    const isAllowedOrigin = isLocalhost || origin === env.FRONTEND_URL;
+
+    // Cloudflare Pagesのプレビューデプロイも許可
+    // 例: https://046ab0ab.gastro-log.pages.dev
+    const frontendDomain = env.FRONTEND_URL?.replace('https://', '') || '';
+    const isPreviewDeploy = origin?.endsWith(`.${frontendDomain}`) ||
+        origin?.match(/^https:\/\/[a-f0-9]+\.gastro-log\.pages\.dev$/);
+    const isAllowedOrigin = isLocalhost || origin === env.FRONTEND_URL || isPreviewDeploy;
     const allowOrigin = isAllowedOrigin ? origin : env.FRONTEND_URL;
 
     return {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { type FoodLog, api } from '../lib/api'
 import { useAuth } from './useAuth'
 
@@ -13,9 +13,24 @@ const stripImageForStorage = (log: FoodLog): FoodLog => {
 export function useFoodLogs() {
     const [logs, setLogs] = useState<FoodLog[]>([])
     const { user, getToken } = useAuth()
+    const hasSyncedRef = useRef(false)
+    const lastUserIdRef = useRef<string | null>(null)
 
     // 初期ロードと同期
     useEffect(() => {
+        const userId = user?.id || null
+
+        // 同じユーザーで既に同期済みの場合はスキップ
+        if (hasSyncedRef.current && lastUserIdRef.current === userId) {
+            return
+        }
+
+        // ユーザーが変わった場合はリセット
+        if (lastUserIdRef.current !== userId) {
+            hasSyncedRef.current = false
+            lastUserIdRef.current = userId
+        }
+
         const syncLogs = async () => {
             // ローカルデータを常に取得しておく
             const localSaved = localStorage.getItem(STORAGE_KEY)
@@ -52,15 +67,21 @@ export function useFoodLogs() {
                         } else {
                             setLogs(cloudLogs)
                         }
+
+                        // 同期成功
+                        hasSyncedRef.current = true
                     }
                 } catch (e) {
                     console.error('Failed to sync logs:', e)
                     // エラー時はローカルデータを表示（オフライン対応）
                     setLogs(localLogs)
+                    // エラーでも同期済みとして扱う（無限リトライを防ぐ）
+                    hasSyncedRef.current = true
                 }
             } else {
                 // 未ログイン時はローカルデータを表示
                 setLogs(localLogs)
+                hasSyncedRef.current = true
 
                 // ローカルデータのマイグレーション（画像削除）
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,7 +94,7 @@ export function useFoodLogs() {
             }
         }
         syncLogs()
-    }, [user])
+    }, [user?.id, getToken])
 
     // 保存処理（ログイン状態により分岐）
     const saveLogsData = async (newLogs: FoodLog[]) => {
