@@ -19,8 +19,8 @@ export interface LifeData {
     stress?: number
 }
 
-// API ベース URL
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
+// API ベース URL (末尾スラッシュを除去)
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787').replace(/\/$/, '')
 
 // API クライアント
 export const api = {
