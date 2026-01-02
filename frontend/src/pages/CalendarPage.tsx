@@ -179,6 +179,30 @@ export function CalendarPage() {
                                             ))}
                                         </div>
                                     )}
+                                    {/* ストレス・睡眠表示 */}
+                                    {log.life && (log.life.stress || log.life.sleepTime) && (
+                                        <div className="flex flex-wrap gap-2 mb-3 text-sm">
+                                            {log.life.stress && (
+                                                <span className={`px-2 py-0.5 rounded-full ${log.life.stress <= 3 ? 'bg-green-100 text-green-700' :
+                                                    log.life.stress <= 6 ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    😰 ストレス: {log.life.stress}/10
+                                                </span>
+                                            )}
+                                            {log.life.sleepTime && (
+                                                <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">
+                                                    😴 睡眠: {log.life.sleepTime}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {/* 運動・生活習慣メモ */}
+                                    {log.life?.exercise && (
+                                        <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 mb-3">
+                                            🏃 {log.life.exercise}
+                                        </p>
+                                    )}
                                     <button
                                         onClick={() => handleDelete(log.id)}
                                         className="text-red-500 text-sm hover:underline"

@@ -42,8 +42,19 @@ export const medicationHistory = pgTable('medication_history', {
     createdAt: timestamp('created_at').defaultNow(),
 });
 
+// セーフリスト（安全な成分リスト）
+export const safeList = pgTable('safe_list', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: text('user_id').notNull(),
+    item: text('item').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
 // 型エクスポート
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
 export type Medication = typeof medicationHistory.$inferSelect;
 export type NewMedication = typeof medicationHistory.$inferInsert;
+export type SafeListItem = typeof safeList.$inferSelect;
+export type NewSafeListItem = typeof safeList.$inferInsert;
+

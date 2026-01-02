@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth } from './useAuth'
+import { api } from '../lib/api'
 
 const STORAGE_KEY = 'safe_list'
 
 export function useSafeList() {
     const [safeList, setSafeList] = useState<string[]>([])
+    const [isSyncing, setIsSyncing] = useState(false)
+    const { user, getToken } = useAuth()
+    const hasSyncedRef = useRef(false)
 
-    // 初期ロード
+    // ローカルストレージからロード
     useEffect(() => {
         const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
@@ -17,32 +22,83 @@ export function useSafeList() {
         }
     }, [])
 
+    // クラウドから同期（ログイン時のみ、一度だけ）
+    useEffect(() => {
+        if (!user || hasSyncedRef.current) return
+
+        const syncFromCloud = async () => {
+            try {
+                const token = await getToken()
+                if (!token) return
+
+                const cloudItems = await api.getSafeList(token)
+
+                // ローカルとクラウドをマージ（重複排除）
+                const localItems: string[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+                const merged = [...new Set([...cloudItems, ...localItems])]
+
+                setSafeList(merged)
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+
+                // マージ結果をクラウドにも保存
+                if (merged.length !== cloudItems.length) {
+                    await api.saveSafeList(token, merged)
+                }
+
+                hasSyncedRef.current = true
+            } catch (error) {
+                console.error('Failed to sync safe list from cloud:', error)
+            }
+        }
+
+        syncFromCloud()
+    }, [user, getToken])
+
+    // クラウドに保存
+    const saveToCloud = useCallback(async (items: string[]) => {
+        if (!user) return
+
+        setIsSyncing(true)
+        try {
+            const token = await getToken()
+            if (token) {
+                await api.saveSafeList(token, items)
+            }
+        } catch (error) {
+            console.error('Failed to save safe list to cloud:', error)
+        } finally {
+            setIsSyncing(false)
+        }
+    }, [user, getToken])
+
     // 成分を追加
-    const addItem = (item: string) => {
+    const addItem = useCallback((item: string) => {
         const trimmed = item.trim()
         if (!trimmed || safeList.includes(trimmed)) return
 
         const updated = [...safeList, trimmed]
         setSafeList(updated)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    }
+        saveToCloud(updated)
+    }, [safeList, saveToCloud])
 
     // 成分を削除
-    const removeItem = (item: string) => {
+    const removeItem = useCallback((item: string) => {
         const updated = safeList.filter((i) => i !== item)
         setSafeList(updated)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    }
+        saveToCloud(updated)
+    }, [safeList, saveToCloud])
 
     // Safe List に含まれているかチェック
-    const isInSafeList = (item: string) => {
+    const isInSafeList = useCallback((item: string) => {
         return safeList.includes(item)
-    }
+    }, [safeList])
 
     // 成分リストから Safe List の成分を除外
-    const filterIngredients = (ingredients: string[]) => {
+    const filterIngredients = useCallback((ingredients: string[]) => {
         return ingredients.filter((ing) => !safeList.includes(ing))
-    }
+    }, [safeList])
 
     return {
         safeList,
@@ -50,5 +106,6 @@ export function useSafeList() {
         removeItem,
         isInSafeList,
         filterIngredients,
+        isSyncing,
     }
 }

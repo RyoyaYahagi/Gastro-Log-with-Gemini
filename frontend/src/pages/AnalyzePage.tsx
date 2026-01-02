@@ -6,9 +6,31 @@ import { resizeImage } from '../lib/imageUtils'
 export function AnalyzePage() {
     const [image, setImage] = useState<string | null>(null)
     const [memo, setMemo] = useState('')
+    const [stressLevel, setStressLevel] = useState<number | null>(null)
+    const [sleepHours, setSleepHours] = useState('')
+    const [sleepMinutes, setSleepMinutes] = useState('')
+    const [lifestyleMemo, setLifestyleMemo] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
     const { addLog } = useFoodLogs()
     const { isAnalyzing, detectedIngredients, resultMessage, startAnalysis, resetResult } = useAnalysis()
+
+    // ストレスレベルの色を取得（1: 緑 → 10: 赤）
+    const getStressColor = (level: number, isSelected: boolean) => {
+        const colors = [
+            'bg-green-500',      // 1
+            'bg-green-400',      // 2
+            'bg-lime-400',       // 3
+            'bg-yellow-400',     // 4
+            'bg-yellow-500',     // 5
+            'bg-amber-500',      // 6
+            'bg-orange-500',     // 7
+            'bg-orange-600',     // 8
+            'bg-red-500',        // 9
+            'bg-red-600',        // 10
+        ]
+        if (isSelected) return colors[level - 1]
+        return 'bg-gray-200 hover:bg-gray-300'
+    }
 
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -40,6 +62,11 @@ export function AnalyzePage() {
             image: image || undefined,
             memo: memo || undefined,
             ingredients: [],
+            life: (stressLevel || sleepHours || lifestyleMemo) ? {
+                stress: stressLevel || undefined,
+                sleepTime: sleepHours ? `${sleepHours}h${sleepMinutes ? ` ${sleepMinutes}m` : ''}` : undefined,
+                exercise: lifestyleMemo || undefined,
+            } : undefined,
         })
         resetForm()
         resetResult() // 以前の解析結果もクリア
@@ -58,6 +85,11 @@ export function AnalyzePage() {
                 image: imageToAnalyze || undefined,
                 memo: memoToAnalyze || undefined,
                 ingredients: result.ingredients,
+                life: (stressLevel || sleepHours || lifestyleMemo) ? {
+                    stress: stressLevel || undefined,
+                    sleepTime: sleepHours ? `${sleepHours}h${sleepMinutes ? ` ${sleepMinutes}m` : ''}` : undefined,
+                    exercise: lifestyleMemo || undefined,
+                } : undefined,
             })
 
             // フォームをクリア
@@ -72,6 +104,10 @@ export function AnalyzePage() {
     const resetForm = () => {
         setImage(null)
         setMemo('')
+        setStressLevel(null)
+        setSleepHours('')
+        setSleepMinutes('')
+        setLifestyleMemo('')
         if (fileInputRef.current) {
             fileInputRef.current.value = ''
         }
@@ -108,18 +144,90 @@ export function AnalyzePage() {
                 </div>
             </div>
 
-            {/* メモ入力 */}
+            {/* 食事メモ入力 */}
             <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-6">
                 <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>✏️</span> メモ
+                    <span>🍽️</span> 食事メモ
                 </h2>
+                <p className="text-xs text-gray-400 mb-2">AI解析に使用されます</p>
                 <textarea
                     value={memo}
                     onChange={(e) => setMemo(e.target.value)}
-                    placeholder="食事の内容、食べた時間など..."
+                    placeholder="食事の内容、食べた時間、飲んだもの..."
                     className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50/50"
-                    rows={3}
+                    rows={2}
                 />
+            </div>
+
+            {/* 生活習慣メモ入力 */}
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>🏃</span> 運動・生活習慣
+                </h2>
+                <textarea
+                    value={lifestyleMemo}
+                    onChange={(e) => setLifestyleMemo(e.target.value)}
+                    placeholder="散歩30分、ジム、ストレッチ、水2L飲んだ..."
+                    className="w-full p-4 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-gray-50/50"
+                    rows={2}
+                />
+            </div>
+
+            {/* ストレスレベル入力 */}
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>😰</span> ストレスレベル
+                </h2>
+                <div className="flex justify-between gap-1">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                        <button
+                            key={level}
+                            onClick={() => setStressLevel(stressLevel === level ? null : level)}
+                            className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${getStressColor(level, stressLevel === level)
+                                } ${stressLevel === level ? 'text-white shadow-md scale-105' : 'text-gray-600'}`}
+                        >
+                            {level}
+                        </button>
+                    ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                    1 = リラックス、10 = 非常にストレスフル
+                </p>
+            </div>
+
+            {/* 睡眠時間入力 */}
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/50 p-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>😴</span> 睡眠時間
+                </h2>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max="24"
+                            value={sleepHours}
+                            onChange={(e) => setSleepHours(e.target.value)}
+                            placeholder="0"
+                            className="w-16 p-3 text-center text-lg font-bold border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50/50"
+                        />
+                        <span className="text-gray-600 font-medium">時間</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max="59"
+                            value={sleepMinutes}
+                            onChange={(e) => setSleepMinutes(e.target.value)}
+                            placeholder="0"
+                            className="w-16 p-3 text-center text-lg font-bold border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-gray-50/50"
+                        />
+                        <span className="text-gray-600 font-medium">分</span>
+                    </div>
+                </div>
             </div>
 
             {/* 解析ボタン */}
