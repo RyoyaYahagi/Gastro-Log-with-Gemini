@@ -52,4 +52,25 @@ export const api = {
             headers: { 'Authorization': `Bearer ${token}` },
         })
     },
+
+    // セーフリスト取得
+    async getSafeList(token: string): Promise<string[]> {
+        const res = await fetch(`${API_BASE}/api/safelist`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        })
+        const data = await res.json()
+        return data.items || []
+    },
+
+    // セーフリスト保存
+    async saveSafeList(token: string, items: string[]): Promise<void> {
+        await fetch(`${API_BASE}/api/safelist`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ items }),
+        })
+    },
 }
