@@ -1,5 +1,5 @@
 import { createDb } from './db';
-import { foodLogs, medicationHistory } from './db/schema';
+import { foodLogs, medicationHistory, safeList } from './db/schema';
 import { eq, and } from 'drizzle-orm';
 
 // 環境変数
@@ -198,6 +198,42 @@ export default {
                 if (medications.length > 0) {
                     await db.insert(medicationHistory).values(
                         medications.map(name => ({ userId, name }))
+                    );
+                }
+
+                return jsonResponse({ success: true }, 200, origin, env);
+            }
+
+            // ========================================
+            // セーフリスト
+            // ========================================
+
+            // セーフリスト取得
+            if (path === '/api/safelist' && method === 'GET') {
+                const userId = getUserIdFromToken(request.headers.get('Authorization'));
+                if (!userId) {
+                    return jsonResponse({ error: 'Unauthorized' }, 401, origin, env);
+                }
+
+                const items = await db.select().from(safeList).where(eq(safeList.userId, userId));
+                return jsonResponse({ items: items.map(i => i.item) }, 200, origin, env);
+            }
+
+            // セーフリスト保存
+            if (path === '/api/safelist' && method === 'POST') {
+                const userId = getUserIdFromToken(request.headers.get('Authorization'));
+                if (!userId) {
+                    return jsonResponse({ error: 'Unauthorized' }, 401, origin, env);
+                }
+
+                const { items } = await request.json() as { items: string[] };
+
+                // 既存を削除して再作成
+                await db.delete(safeList).where(eq(safeList.userId, userId));
+
+                if (items.length > 0) {
+                    await db.insert(safeList).values(
+                        items.map(item => ({ userId, item }))
                     );
                 }
 
