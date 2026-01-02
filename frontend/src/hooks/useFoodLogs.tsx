@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import type { ReactNode } from 'react'
 import { type FoodLog, api } from '../lib/api'
 import { useAuth } from './useAuth'
 
@@ -10,7 +11,19 @@ const stripImageForStorage = (log: FoodLog): FoodLog => {
     return rest
 }
 
-export function useFoodLogs() {
+// Context の型定義
+interface FoodLogsContextType {
+    logs: FoodLog[]
+    addLog: (log: Omit<FoodLog, 'id' | 'createdAt'>) => FoodLog
+    deleteLog: (id: string) => Promise<void>
+    getLogsByDate: (date: string) => FoodLog[]
+}
+
+// Context 作成
+const FoodLogsContext = createContext<FoodLogsContextType | null>(null)
+
+// Provider コンポーネント
+export function FoodLogsProvider({ children }: { children: ReactNode }) {
     const [logs, setLogs] = useState<FoodLog[]>([])
     const { user, getToken } = useAuth()
     const hasSyncedRef = useRef(false)
@@ -165,11 +178,19 @@ export function useFoodLogs() {
         return logs.filter((log) => log.date === date)
     }
 
-    return {
-        logs,
-        addLog,
-        deleteLog,
-        getLogsByDate,
-    }
+    return (
+        <FoodLogsContext.Provider value= {{ logs, addLog, deleteLog, getLogsByDate }
+}>
+    { children }
+    </FoodLogsContext.Provider>
+    )
 }
 
+// カスタムフック（Context から値を取得）
+export function useFoodLogs(): FoodLogsContextType {
+    const context = useContext(FoodLogsContext)
+    if (!context) {
+        throw new Error('useFoodLogs must be used within a FoodLogsProvider')
+    }
+    return context
+}
