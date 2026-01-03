@@ -90,14 +90,19 @@ export function useSafeList() {
         saveToCloud(updated)
     }, [safeList, saveToCloud])
 
-    // Safe List に含まれているかチェック
+    // Safe List に含まれているかチェック（部分一致）
+    // 例: safeList に "卵" があれば "卵（アレルゲン）" もマッチする
     const isInSafeList = useCallback((item: string) => {
-        return safeList.includes(item)
+        return safeList.some(safe =>
+            item.includes(safe) || safe.includes(item)
+        )
     }, [safeList])
 
-    // 成分リストから Safe List の成分を除外
+    // 成分リストから Safe List の成分を除外（部分一致）
     const filterIngredients = useCallback((ingredients: string[]) => {
-        return ingredients.filter((ing) => !safeList.includes(ing))
+        return ingredients.filter((ing) =>
+            !safeList.some(safe => ing.includes(safe) || safe.includes(ing))
+        )
     }, [safeList])
 
     return {
