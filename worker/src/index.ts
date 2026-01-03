@@ -1,6 +1,6 @@
 import { createDb } from './db';
 import { foodLogs, medicationHistory, safeList } from './db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 import { z } from 'zod';
 
@@ -412,47 +412,11 @@ export default {
                 }
             }
 
-            // ========================================
-            // DEBUG: 環境確認用 (後で削除すること)
-            // ========================================
-            if (path === '/api/debug/env' && method === 'GET') {
-                const dbUrl = env.DATABASE_URL || '';
-                const maskedUrl = dbUrl.length > 20
-                    ? `${dbUrl.substring(0, 15)}...${dbUrl.substring(dbUrl.length - 10)}`
-                    : 'NOT_SET';
-
-                return jsonResponse({
-                    status: 'ok',
-                    deployment: 'debug-v1',
-                    databaseUrlMasked: maskedUrl, // 正しいURLが設定されているか確認
-                    hasFrontendUrl: !!env.FRONTEND_URL,
-                    hasGeminiKey: !!env.GEMINI_API_KEY,
-                    hasClerkJwks: !!env.CLERK_JWKS_URL,
-                }, 200, origin, env);
-            }
-
-
-            if (path === '/api/debug/tables' && method === 'GET') {
-                try {
-                    const result = await db.execute(sql`
-                        SELECT table_name 
-                        FROM information_schema.tables 
-                        WHERE table_schema = 'public'
-                    `);
-                    return jsonResponse({ tables: result.rows }, 200, origin, env);
-                } catch (e: any) {
-                    return jsonResponse({ error: e.message, stack: e.stack }, 500, origin, env);
-                }
-            }
-
             // 404
             return jsonResponse({ error: 'Not Found' }, 404, origin, env);
         } catch (error) {
             console.error('API Error:', error);
-            // DEBUG: 本番環境でも詳細エラーを返すように一時的に変更
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            const stack = error instanceof Error ? error.stack : undefined;
-            return jsonResponse({ error: 'Internal server error', details: message, stack }, 500, origin, env);
+            return jsonResponse({ error: 'Internal server error' }, 500, origin, env);
         }
     },
 };
