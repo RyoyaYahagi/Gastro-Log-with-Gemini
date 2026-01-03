@@ -6,14 +6,19 @@ import { useAuth } from './useAuth'
 const STORAGE_KEY = 'food_history'
 
 // localStorage 用に画像を除外したログを作成
-const stripImageForStorage = (log: FoodLog): FoodLog => {
+const stripImageForStorage = (log: LocalStorageLog): LocalStorageLog => {
     const { image, ...rest } = log
-    return rest
+    return rest as LocalStorageLog
 }
 
 // Context の型定義
+// Context の型定義
+interface LocalStorageLog extends FoodLog {
+    synced?: boolean
+}
+
 interface FoodLogsContextType {
-    logs: FoodLog[]
+    logs: LocalStorageLog[]
     addLog: (log: Omit<FoodLog, 'id' | 'createdAt'>) => FoodLog
     deleteLog: (id: string) => Promise<void>
     getLogsByDate: (date: string) => FoodLog[]
@@ -24,7 +29,7 @@ const FoodLogsContext = createContext<FoodLogsContextType | null>(null)
 
 // Provider コンポーネント
 export function FoodLogsProvider({ children }: { children: ReactNode }) {
-    const [logs, setLogs] = useState<FoodLog[]>([])
+    const [logs, setLogs] = useState<LocalStorageLog[]>([])
     const { user, getToken } = useAuth()
     const hasSyncedRef = useRef(false)
     const lastUserIdRef = useRef<string | null>(null)
@@ -33,24 +38,26 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const userId = user?.id || null
 
-        // 同じユーザーで既に同期済みの場合はスキップ
         if (hasSyncedRef.current && lastUserIdRef.current === userId) {
             return
         }
 
-        // ユーザーが変わった場合はリセット
         if (lastUserIdRef.current !== userId) {
             hasSyncedRef.current = false
             lastUserIdRef.current = userId
+            setLogs([]) // ユーザー切り替え時にクリア
         }
 
         const syncLogs = async () => {
+            console.log('[DEBUG syncLogs] Starting sync...')
+
             // ローカルデータを常に取得しておく
             const localSaved = localStorage.getItem(STORAGE_KEY)
-            let localLogs: FoodLog[] = []
+            let localLogs: LocalStorageLog[] = []
             if (localSaved) {
                 try {
                     localLogs = JSON.parse(localSaved)
+                    console.log('[DEBUG syncLogs] localStorage has', localLogs.length, 'items')
                 } catch {
                     localLogs = []
                 }
@@ -62,85 +69,82 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
                     if (token) {
                         // 1. クラウドからデータを取得
                         const cloudLogs = await api.getLogs(token)
+                        console.log('[DEBUG syncLogs] Cloud has', cloudLogs.length, 'items')
 
-                        // 2. ローカルにあってクラウドにないデータを探す（IDで比較）
-                        // ※ IDだけでなく、オフラインで編集された可能性も考慮すべきだが、
-                        //    今回は「IDが存在しないもの＝新規作成されたもの」として同期する
-                        const cloudIds = new Set(cloudLogs.map(l => l.id))
-                        const unsyncedLogs = localLogs.filter(l => !cloudIds.has(l.id))
+                        // 2. 未同期データを特定 (synced === false のみ)
+                        const unsyncedLogs = localLogs.filter(l => l.synced === false)
+                        console.log('[DEBUG syncLogs] Unsynced local items:', unsyncedLogs.length)
 
                         if (unsyncedLogs.length > 0) {
-                            console.log(`Syncing ${unsyncedLogs.length} logs to cloud...`)
-                            // 画像も含めてアップロード
+                            console.log('[DEBUG syncLogs] Uploading unsynced logs...')
                             await api.saveLogs(token, unsyncedLogs)
 
-                            // 同期後に再度取得して最新状態にする
                             const syncedLogs = await api.getLogs(token)
-                            setLogs(syncedLogs)
+                            const mergedLogs: LocalStorageLog[] = syncedLogs.map(l => ({ ...l, synced: true }))
+
+                            setLogs(mergedLogs)
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedLogs.map(stripImageForStorage)))
+                            console.log('[DEBUG syncLogs] After upload, total:', mergedLogs.length)
                         } else {
-                            setLogs(cloudLogs)
+                            // 未同期がない場合、クラウドのデータを正とする（これでゾンビが消える）
+                            const mergedLogs: LocalStorageLog[] = cloudLogs.map(l => ({ ...l, synced: true }))
+                            setLogs(mergedLogs)
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedLogs.map(stripImageForStorage)))
+                            console.log('[DEBUG syncLogs] Using cloud data, total:', mergedLogs.length)
                         }
 
-                        // 同期成功
                         hasSyncedRef.current = true
                     }
                 } catch (e) {
-                    console.error('Failed to sync logs:', e)
-                    // エラー時はローカルデータを表示（オフライン対応）
+                    console.error('[DEBUG syncLogs] Failed to sync:', e)
                     setLogs(localLogs)
-                    // エラーでも同期済みとして扱う（無限リトライを防ぐ）
-                    hasSyncedRef.current = true
                 }
             } else {
-                // 未ログイン時はローカルデータを表示
                 setLogs(localLogs)
                 hasSyncedRef.current = true
-
-                // ローカルデータのマイグレーション（画像削除）
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const hasImage = localLogs.some((log: any) => log.image && log.image.length > 100)
-                if (hasImage) {
-                    console.log('Migrating data: removing images from storage')
-                    const stripped = localLogs.map(stripImageForStorage)
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
-                }
             }
         }
         syncLogs()
     }, [user?.id, getToken])
 
-    // 保存処理（ログイン状態により分岐）
-    const saveLogsData = async (newLogs: FoodLog[]) => {
+    // 保存処理
+    const saveLogsData = async (newLogs: LocalStorageLog[]) => {
+        // まずUI反映とローカル保存（synced状態はそのまま）
         setLogs(newLogs)
+        try {
+            const stripped = newLogs.map(stripImageForStorage)
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e)
+        }
 
         if (user) {
             try {
                 const token = await getToken()
                 if (token) {
-                    // 画像も含めてクラウドに保存
-                    // 注意: Base64画像は大きいため、将来的にはR2等の専用ストレージが望ましい
+                    // ここでは全量渡しているが、API側はUPSERTなのでOK
+                    // 最適化するなら unsynced だけ渡すべきだが、今回は安全策で
                     await api.saveLogs(token, newLogs)
+
+                    // 成功したら全アイテムを synced: true に更新
+                    const syncedLogs = newLogs.map(l => ({ ...l, synced: true }))
+                    setLogs(syncedLogs)
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(syncedLogs.map(stripImageForStorage)))
                 }
             } catch (e) {
                 console.error('Failed to save to cloud:', e)
-            }
-        } else {
-            // ローカル保存
-            try {
-                const stripped = newLogs.map(stripImageForStorage)
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
-            } catch (e) {
-                console.error('Failed to save to localStorage:', e)
+                // 失敗した場合、newLogs (一部 synced: false) のままなので、次回起動時に再試行される
             }
         }
     }
 
     // ログ追加
     const addLog = (log: Omit<FoodLog, 'id' | 'createdAt'>) => {
-        const newLog: FoodLog = {
+        const newLog: LocalStorageLog = {
             ...log,
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
+            synced: false, // 新規作成時は未同期
         }
         const updated = [newLog, ...logs]
         saveLogsData(updated)
@@ -149,28 +153,42 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
 
     // ログ削除
     const deleteLog = async (id: string) => {
+        console.log('[DEBUG deleteLog] Starting delete for id:', id)
+        console.log('[DEBUG deleteLog] Current logs count:', logs.length)
+
         const updated = logs.filter((log) => log.id !== id)
-        setLogs(updated) // UIを先に更新（Optimistic UI）
+        console.log('[DEBUG deleteLog] After filter, logs count:', updated.length)
+
+        setLogs(updated)
+
+        // 常にローカルストレージも更新
+        try {
+            const stripped = updated.map(stripImageForStorage)
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
+            console.log('[DEBUG deleteLog] localStorage updated, items:', stripped.length)
+        } catch (e) {
+            console.error('Failed to save to localStorage:', e)
+        }
 
         if (user) {
             try {
                 const token = await getToken()
                 if (token) {
+                    console.log('[DEBUG deleteLog] Calling API to delete:', id)
                     await api.deleteLog(token, id)
+                    console.log('[DEBUG deleteLog] API delete success')
+
+                    // 削除成功後は、残りのリストは「同期済み」とみなせる
+                    // (ここでの updated はまだ synced フラグが true だったり false だったりする)
+                    // ここで安全のため、残ったログはそのままにしておく（saveLogsDataのように全更新しない）
+                    // 理由: deleteLog は単一削除 API なので、他の未同期ログの状態には影響しないはずだから。
                 }
             } catch (e) {
-                console.error('Failed to delete from cloud:', e)
-                // ロールバック等の処理が必要だが今回は省略
-            }
-        } else {
-            // ローカル保存
-            try {
-                const stripped = updated.map(stripImageForStorage)
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
-            } catch (e) {
-                console.error('Failed to save to localStorage:', e)
+                console.error('[DEBUG deleteLog] API delete FAILED:', e)
             }
         }
+
+        console.log('[DEBUG deleteLog] Done')
     }
 
     // 日付でフィルター
@@ -179,10 +197,10 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <FoodLogsContext.Provider value= {{ logs, addLog, deleteLog, getLogsByDate }
-}>
-    { children }
-    </FoodLogsContext.Provider>
+        <FoodLogsContext.Provider value={{ logs, addLog, deleteLog, getLogsByDate }
+        }>
+            {children}
+        </FoodLogsContext.Provider>
     )
 }
 
