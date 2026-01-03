@@ -49,15 +49,12 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
         }
 
         const syncLogs = async () => {
-            console.log('[DEBUG syncLogs] Starting sync...')
-
             // ローカルデータを常に取得しておく
             const localSaved = localStorage.getItem(STORAGE_KEY)
             let localLogs: LocalStorageLog[] = []
             if (localSaved) {
                 try {
                     localLogs = JSON.parse(localSaved)
-                    console.log('[DEBUG syncLogs] localStorage has', localLogs.length, 'items')
                 } catch {
                     localLogs = []
                 }
@@ -67,36 +64,29 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
                 try {
                     const token = await getToken()
                     if (token) {
-                        // 1. クラウドからデータを取得
+                        // クラウドからデータを取得
                         const cloudLogs = await api.getLogs(token)
-                        console.log('[DEBUG syncLogs] Cloud has', cloudLogs.length, 'items')
 
-                        // 2. 未同期データを特定 (synced === false のみ)
+                        // 未同期データを特定 (synced === false のみ)
                         const unsyncedLogs = localLogs.filter(l => l.synced === false)
-                        console.log('[DEBUG syncLogs] Unsynced local items:', unsyncedLogs.length)
 
                         if (unsyncedLogs.length > 0) {
-                            console.log('[DEBUG syncLogs] Uploading unsynced logs...')
                             await api.saveLogs(token, unsyncedLogs)
-
                             const syncedLogs = await api.getLogs(token)
                             const mergedLogs: LocalStorageLog[] = syncedLogs.map(l => ({ ...l, synced: true }))
-
                             setLogs(mergedLogs)
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedLogs.map(stripImageForStorage)))
-                            console.log('[DEBUG syncLogs] After upload, total:', mergedLogs.length)
                         } else {
-                            // 未同期がない場合、クラウドのデータを正とする（これでゾンビが消える）
+                            // 未同期がない場合、クラウドのデータを正とする
                             const mergedLogs: LocalStorageLog[] = cloudLogs.map(l => ({ ...l, synced: true }))
                             setLogs(mergedLogs)
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedLogs.map(stripImageForStorage)))
-                            console.log('[DEBUG syncLogs] Using cloud data, total:', mergedLogs.length)
                         }
 
                         hasSyncedRef.current = true
                     }
                 } catch (e) {
-                    console.error('[DEBUG syncLogs] Failed to sync:', e)
+                    console.error('Failed to sync logs:', e)
                     setLogs(localLogs)
                 }
             } else {
@@ -153,19 +143,13 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
 
     // ログ削除
     const deleteLog = async (id: string) => {
-        console.log('[DEBUG deleteLog] Starting delete for id:', id)
-        console.log('[DEBUG deleteLog] Current logs count:', logs.length)
-
         const updated = logs.filter((log) => log.id !== id)
-        console.log('[DEBUG deleteLog] After filter, logs count:', updated.length)
-
         setLogs(updated)
 
-        // 常にローカルストレージも更新
+        // ローカルストレージも更新
         try {
             const stripped = updated.map(stripImageForStorage)
             localStorage.setItem(STORAGE_KEY, JSON.stringify(stripped))
-            console.log('[DEBUG deleteLog] localStorage updated, items:', stripped.length)
         } catch (e) {
             console.error('Failed to save to localStorage:', e)
         }
@@ -174,21 +158,12 @@ export function FoodLogsProvider({ children }: { children: ReactNode }) {
             try {
                 const token = await getToken()
                 if (token) {
-                    console.log('[DEBUG deleteLog] Calling API to delete:', id)
                     await api.deleteLog(token, id)
-                    console.log('[DEBUG deleteLog] API delete success')
-
-                    // 削除成功後は、残りのリストは「同期済み」とみなせる
-                    // (ここでの updated はまだ synced フラグが true だったり false だったりする)
-                    // ここで安全のため、残ったログはそのままにしておく（saveLogsDataのように全更新しない）
-                    // 理由: deleteLog は単一削除 API なので、他の未同期ログの状態には影響しないはずだから。
                 }
             } catch (e) {
-                console.error('[DEBUG deleteLog] API delete FAILED:', e)
+                console.error('Failed to delete from cloud:', e)
             }
         }
-
-        console.log('[DEBUG deleteLog] Done')
     }
 
     // 日付でフィルター
