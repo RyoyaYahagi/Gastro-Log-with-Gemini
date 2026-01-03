@@ -1,9 +1,11 @@
-name = "gastro-log-api"
+name = "gastrolog-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 [vars]
-FRONTEND_URL = "https://gastro-log.pages.dev"
+FRONTEND_URL = "https://gastrolog.pages.dev"
 
 # Secrets (set via `wrangler secret put`):
 # - DATABASE_URL (Neon connection string)
+# - GEMINI_API_KEY
+# - CLERK_JWKS_URL
